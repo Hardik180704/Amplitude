@@ -20,6 +20,10 @@ pub enum MixerCommand {
     NoteOn { track_id: u32, note: u8, velocity: u8 },
     NoteOff { track_id: u32, note: u8 },
     
+    // Project Commands
+    LoadProject { project: Project },
+    RequestProjectState,
+    
     Play,
     Stop,
 }
