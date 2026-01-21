@@ -1,4 +1,5 @@
 use crate::nodes::GainNode;
+use crate::graph::AudioNode;
 
 // Represents a piece of audio on the timeline
 #[derive(Clone)]
@@ -58,6 +59,7 @@ pub struct Mixer {
 }
 
 impl Mixer {
+
     pub fn new() -> Self {
         Self {
             tracks: Vec::new(),
@@ -69,5 +71,42 @@ impl Mixer {
         let id = self.tracks.len() as u32;
         self.tracks.push(Track::new(id));
         id
+    }
+
+    /// Process mixer into stereo output
+    pub fn process(&mut self, output: &mut [&mut [f32]]) {
+        // Zero out master output first
+        for channel in output.iter_mut() {
+            channel.fill(0.0);
+        }
+
+        let samples = output[0].len();
+        
+        // Temporary buffer for track processing
+        // In real engine, we'd use a pool.
+        let mut track_buf_l = vec![0.0; samples];
+        let mut track_buf_r = vec![0.0; samples];
+
+        for track in &mut self.tracks {
+            // clear temp buffers
+            track_buf_l.fill(0.0);
+            track_buf_r.fill(0.0);
+            
+            let mut track_io = vec![&mut track_buf_l[..], &mut track_buf_r[..]];
+            
+            // Process track (generates audio into track_io)
+            track.process(&mut track_io);
+            
+            // Sum into master
+            for i in 0..samples {
+                output[0][i] += track_buf_l[i]; // Left
+                output[1][i] += track_buf_r[i]; // Right
+            }
+        }
+        
+        // Apply Master Gain
+        self.master_gain.process(&[], output);
+        
+        // TODO: Hard Limiter here to prevent clipping
     }
 }
