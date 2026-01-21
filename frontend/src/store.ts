@@ -2,6 +2,16 @@ import { create } from 'zustand';
 import { initialProject } from './utils/mockProject'; // We'll assume this exists or create it
 
 // Types mirroring Rust Shared types
+export interface ClipData {
+    id: number;
+    name: string;
+    start: number;
+    duration: number;
+    offset: number;
+    gain_db: number;
+    muted: boolean;
+}
+
 export interface TrackData {
     id: number;
     name: string;
@@ -9,7 +19,7 @@ export interface TrackData {
     pan: number;
     muted: boolean;
     soloed: boolean;
-    clips: any[];
+    clips: ClipData[];
     effects: any[];
 }
 

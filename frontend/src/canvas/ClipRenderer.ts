@@ -1,18 +1,18 @@
-import { Project, TrackData, ClipData } from '../store';
+import type { Project } from '../store';
 
 export const ClipRenderer = {
     renderTracks: (
         ctx: CanvasRenderingContext2D, 
         project: Project, 
         width: number, 
-        height: number, 
+        _height: number, 
         scrollX: number, 
         zoom: number,
-        trackHeight: number = 96 // Fixed track height for v1
+        trackHeight: number = 96
     ) => {
-        // Calculate visible range
-        const startPixel = scrollX;
-        const endPixel = scrollX + width;
+        // Calculate visible range (Unused for now, but ready for logic)
+        // const startPixel = scrollX;
+        // const endPixel = scrollX + width;
 
         if (!project.tracks) return;
 
