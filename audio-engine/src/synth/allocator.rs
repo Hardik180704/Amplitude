@@ -1,94 +1,62 @@
-use crate::midi::MidiEvent;
-
-// Simple structure to track the state of a voice
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum VoiceState {
-    Idle,
-    Active { note: u8, velocity: u8, age: u64 },
-    Releasing { note: u8 }, // For ADSR tail
-}
-
 pub struct VoiceAllocator {
-    pub num_voices: usize,
-    pub voices: Vec<VoiceState>,
-    last_age: u64,
+    voices_active: Vec<bool>,
+    voice_ages: Vec<usize>,
+    voice_notes: Vec<Option<u8>>, // Note currently playing on voice
 }
 
 impl VoiceAllocator {
-    pub fn new(num_voices: usize) -> Self {
+    pub fn new(max_voices: usize) -> Self {
         Self {
-            num_voices,
-            voices: vec![VoiceState::Idle; num_voices],
-            last_age: 0,
+            voices_active: vec![false; max_voices],
+            voice_ages: vec![0; max_voices],
+            voice_notes: vec![None; max_voices],
         }
     }
-
-    // Called every block
-    pub fn tick(&mut self) {
-        self.last_age += 1;
-    }
-
-    // Returns index of voice to use, or None if handled internally (e.g. retrigger)
-    pub fn note_on(&mut self, note: u8, velocity: u8) -> usize {
-        // 1. Check if note is already playing (Retrigger or steal same note)
-        for (i, state) in self.voices.iter_mut().enumerate() {
-            if let VoiceState::Active { note: n, .. } = state {
-                if *n == note {
-                    *state = VoiceState::Active { note, velocity, age: self.last_age };
-                    return i;
-                }
-            }
-            if let VoiceState::Releasing { note: n } = state {
-                 if *n == note {
-                    *state = VoiceState::Active { note, velocity, age: self.last_age };
-                    return i;
-                }
-            }
-        }
-
-        // 2. Find free voice
-        for (i, state) in self.voices.iter_mut().enumerate() {
-            if *state == VoiceState::Idle {
-                *state = VoiceState::Active { note, velocity, age: self.last_age };
-                return i;
-            }
-        }
-
-        // 3. Steal oldest voice (Naive LRU)
-        let mut oldest_age = u64::MAX;
-        let mut victim_idx = 0;
-
-        for (i, state) in self.voices.iter().enumerate() {
-            if let VoiceState::Active { age, .. } = state {
-                if *age < oldest_age {
-                    oldest_age = *age;
-                    victim_idx = i;
-                }
-            }
+    
+    // Returns index of allocated voice
+    pub fn note_on(&mut self, note: u8, _velocity: u8) -> usize {
+        // 1. Try to find existing voice for same note (retrigger)
+        if let Some(idx) = self.voice_notes.iter().position(|n| *n == Some(note)) {
+            self.voice_ages[idx] = 0; // Reset age (newest)
+            return idx;
         }
         
-        // Steal it
-        self.voices[victim_idx] = VoiceState::Active { note, velocity, age: self.last_age };
-        victim_idx
+        // 2. Find free voice
+        if let Some(idx) = self.voices_active.iter().position(|active| !*active) {
+            self.voices_active[idx] = true;
+            self.voice_ages[idx] = 0;
+            self.voice_notes[idx] = Some(note);
+            return idx;
+        }
+        
+        // 3. Steal oldest voice
+        let idx = self.voice_ages.iter().enumerate().max_by_key(|(_i, age)| *age).map(|(i, _)| i).unwrap_or(0);
+        self.voice_ages[idx] = 0;
+        self.voice_notes[idx] = Some(note);
+        return idx;
     }
-
+    
     pub fn note_off(&mut self, note: u8) -> Option<usize> {
-        for (i, state) in self.voices.iter_mut().enumerate() {
-            match state {
-                VoiceState::Active { note: n, .. } if *n == note => {
-                    *state = VoiceState::Releasing { note };
-                    return Some(i);
-                },
-                _ => {}
-            }
+        if let Some(idx) = self.voice_notes.iter().position(|n| *n == Some(note)) {
+            // Don't mark inactive yet, let Release phase finish.
+            // But we remove note tracking so it can be re-allocated if needed?
+            // Actually, for poly synth, we want Release phase to play out on ANY voice.
+            // We just return the index so the synth can trigger Release on that voice.
+            return Some(idx);
         }
         None
     }
     
-    // Called by the voice itself when envelope finishes
-    pub fn voice_finished(&mut self, voice_index: usize) {
-        if voice_index < self.num_voices {
-            self.voices[voice_index] = VoiceState::Idle;
+    pub fn voice_finished(&mut self, idx: usize) {
+        if idx < self.voices_active.len() {
+            self.voices_active[idx] = false;
+            self.voice_notes[idx] = None;
+        }
+    }
+    
+    pub fn tick(&mut self) {
+        for age in self.voice_ages.iter_mut() {
+            *age = age.saturating_add(1);
         }
     }
 }
