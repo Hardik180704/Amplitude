@@ -41,7 +41,7 @@ pub struct TrackData {
     pub muted: bool,
     pub soloed: bool,
     pub clips: Vec<ClipData>,
-    pub effects: Vec<EffectData>,
+    pub effects: Vec<Effect>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -68,7 +68,28 @@ pub struct MidiNoteData {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct EffectData {
-    pub effect_type: String, // "EQ", "DELAY", "COMP"
-    pub params: Vec<f32>,
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(tag = "type", content = "payload")]
+pub enum Effect {
+    Eq {
+        low_gain: f32,
+        mid_gain: f32,
+        high_gain: f32,
+    },
+    Compressor {
+        threshold: f32,
+        ratio: f32,
+        attack: f32,
+        release: f32,
+        makeup_gain: f32,
+    },
+    Delay {
+        time_ms: f32,
+        feedback: f32,
+        mix: f32,
+    },
+    Reverb {
+        mix: f32,
+        decay: f32,
+    }
 }

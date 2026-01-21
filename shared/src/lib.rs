@@ -11,6 +11,11 @@ pub enum Action {
     AddClip { track_id: usize, clip: ClipData },
     MoveClip { clip_id: usize, new_start: u64, track_id: usize },
     
+    // Effects
+    AddEffect { track_id: usize, effect: Effect },
+    RemoveEffect { track_id: usize, index: usize },
+    UpdateEffect { track_id: usize, index: usize, effect: Effect },
+    
     // Transport
     Play,
     Stop,
@@ -55,4 +60,29 @@ pub struct MeterData {
     pub left_peak: std::sync::atomic::AtomicU32,
     pub right_peak: std::sync::atomic::AtomicU32,
     pub playhead_pos: std::sync::atomic::AtomicU32,
+}
+
+pub fn db_to_linear(db: f32) -> f32 {
+    10.0f32.powf(db / 20.0)
+}
+
+pub fn linear_to_db(linear: f32) -> f32 {
+    if linear <= 1e-9 {
+        -180.0
+    } else {
+        20.0 * linear.log10()
+    }
+}
+
+// Simple SPSC Ring Buffer stub for now. 
+// In a real SPSC, we need AtomicUsize for head/tail and UnsafeCell/Arc for buffer.
+// Assuming single-threaded access for "Headless" mode, but we need it for WASM too.
+pub struct SharedRingBuffer {
+    // Placeholder
+}
+
+impl SharedRingBuffer {
+    pub fn new(_capacity: usize) -> Self {
+        Self {}
+    }
 }
