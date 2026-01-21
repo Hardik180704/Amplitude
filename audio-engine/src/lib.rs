@@ -1,7 +1,8 @@
 use wasm_bindgen::prelude::*;
 
 mod processor;
-pub mod graph; // Public for testing?
+pub mod graph;
+pub mod nodes;
 pub use processor::WasmAudioProcessor;
 
 #[wasm_bindgen]
