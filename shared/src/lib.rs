@@ -17,3 +17,12 @@ pub struct AudioCommand {
     pub timestamp: u64, // When to apply (0 = immediate)
     pub command: MixerCommand,
 }
+
+// Data layout for shared memory metering (WASM -> UI)
+// We use u32 to store f32 bits atomically
+#[repr(C)]
+pub struct MeterData {
+    pub left_peak: std::sync::atomic::AtomicU32,
+    pub right_peak: std::sync::atomic::AtomicU32,
+    pub playhead_pos: std::sync::atomic::AtomicU32,
+}
