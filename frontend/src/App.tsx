@@ -3,15 +3,20 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 import { Transport } from './components/Transport'
-import { MixerChannel } from './components/MixerChannel'
-import { AudioContextManager } from './audio/AudioContextManager'
+import { MixerChannel } from './components/MixerChannel';
+import { AudioContextManager } from './audio/AudioContextManager';
+import { TopBar } from './components/TopBar';
+import { useProjectStore } from './store';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { project, addTrack } = useProjectStore();
 
   return (
-    <>
-      <div>
+    <div className="App">
+       <TopBar />
+       <div style={{ padding: '20px' }}>
+          <h2>{project.name}</h2>
+          <button onClick={addTrack}>Add Track</button>
         <a href="https://vite.dev" target="_blank">
           <img src={viteLogo} className="logo" alt="Vite logo" />
         </a>
