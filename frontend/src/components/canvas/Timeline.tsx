@@ -1,11 +1,24 @@
+import { useRef, useEffect, useState, useCallback } from 'react';
+import { ClipRenderer } from '../../canvas/ClipRenderer';
 import { PlayheadRenderer } from '../../canvas/PlayheadRenderer';
+import { CanvasView } from './CanvasView';
+import { useProjectStore } from '../../store';
+import { interactionManager } from '../../interactions/InteractionManager';
 
-export const Timeline: React.FC<TimelineProps> = ({ zoom = 50, scrollX = 0 }) => {
+export const Timeline: React.FC = () => {
     const { project } = useProjectStore();
     // Temporary mocked playhead position, loop it for effect
     const playheadPos = useRef(0);
     
-    // ... theme colors ...
+    // Subscribe to Interaction Manager
+    const [viewState, setViewState] = useState(interactionManager.getState());
+
+    useEffect(() => {
+        const unsubscribe = interactionManager.subscribe(setViewState);
+        return () => { unsubscribe(); };
+    }, []);
+
+    const { zoom, scrollX } = viewState;
     
     // Theme Colors
     const colors = {
@@ -33,11 +46,6 @@ export const Timeline: React.FC<TimelineProps> = ({ zoom = 50, scrollX = 0 }) =>
         ClipRenderer.renderTracks(ctx, project, width + scrollX, height, scrollX, zoom);
         
         // 2. Render Grid (Overlay)
-        const colors = {
-            gridMajor: 'rgba(63, 63, 78, 0.3)',
-            gridMinor: 'rgba(42, 42, 53, 0.2)',
-            text: '#52525B'
-        };
         
         const startPixel = scrollX;
         const endPixel = scrollX + (width / dpr);
@@ -88,6 +96,10 @@ export const Timeline: React.FC<TimelineProps> = ({ zoom = 50, scrollX = 0 }) =>
         <CanvasView 
             onRender={render} 
             className="w-full h-full cursor-crosshair"
+            onMouseDown={(e) => interactionManager.handleMouseDown(e.nativeEvent)}
+            onMouseMove={(e) => interactionManager.handleMouseMove(e.nativeEvent)}
+            onMouseUp={(e) => interactionManager.handleMouseUp(e.nativeEvent)}
+            onWheel={(e) => interactionManager.handleWheel(e.nativeEvent)}
         />
     );
 };

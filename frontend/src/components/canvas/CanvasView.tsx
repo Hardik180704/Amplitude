@@ -1,11 +1,15 @@
 import React, { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { RenderLoop, RenderCallback } from '../../canvas/RenderLoop';
+import { RenderLoop, type RenderCallback } from '../../canvas/RenderLoop';
 
 interface CanvasViewProps {
     onRender: RenderCallback;
     width?: number;
     height?: number;
     className?: string;
+    onMouseDown?: React.MouseEventHandler<HTMLDivElement>;
+    onMouseMove?: React.MouseEventHandler<HTMLDivElement>;
+    onMouseUp?: React.MouseEventHandler<HTMLDivElement>;
+    onWheel?: React.WheelEventHandler<HTMLDivElement>;
 }
 
 export interface CanvasHandle {
@@ -13,7 +17,7 @@ export interface CanvasHandle {
     stop: () => void;
 }
 
-export const CanvasView = forwardRef<CanvasHandle, CanvasViewProps>(({ onRender, className = '', width, height }, ref) => {
+export const CanvasView = forwardRef<CanvasHandle, CanvasViewProps>(({ onRender, className = '', width: _width, height: _height, ...rest }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const loopRef = useRef<RenderLoop>(new RenderLoop());
     const containerRef = useRef<HTMLDivElement>(null);
@@ -63,7 +67,14 @@ export const CanvasView = forwardRef<CanvasHandle, CanvasViewProps>(({ onRender,
     }, [onRender]);
 
     return (
-        <div ref={containerRef} className={`relative w-full h-full ${className}`}>
+        <div 
+            ref={containerRef} 
+            className={`relative w-full h-full ${className}`}
+            onMouseDown={rest.onMouseDown}
+            onMouseMove={rest.onMouseMove}
+            onMouseUp={rest.onMouseUp}
+            onWheel={rest.onWheel}
+        >
             <canvas ref={canvasRef} />
         </div>
     );

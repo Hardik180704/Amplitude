@@ -76,3 +76,5 @@ export class InteractionManager {
         this.isDragging = false;
     }
 }
+
+export const interactionManager = new InteractionManager();
