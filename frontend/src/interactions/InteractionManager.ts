@@ -1,12 +1,16 @@
-import { WebSocketManager } from '../api/WebSocketManager';
 import { useProjectStore } from '../store';
+import { transport } from '../audio/TransportManager';
+import { audioEngine } from '../audio/AudioEngine';
+import { WebSocketManager } from '../api/WebSocketManager';
 
 export interface InteractionState {
     zoom: number;
     scrollX: number;
     selection: number[];
     draggingClipId?: number;
-    dragOffset?: number; // In beats? or Pixels? Let's use pixels for renderer, convert to time for commit.
+    dragOffset?: number; 
+    isScrubbing: boolean;
+    followPlayhead: boolean;
 }
 
 export type InteractionCallback = (state: InteractionState) => void;
@@ -19,15 +23,39 @@ export class InteractionManager {
     private isDragging: boolean = false;
     private lastMouseX: number = 0;
     
+    // Pro Features
+    private isScrubbing: boolean = false;
+    private followPlayhead: boolean = true;
+    
     // Clip Drag State
     private isDraggingClip: boolean = false;
     private draggingClipId: number | null = null;
-    private dragStartX: number = 0;
     private currentDragOffset: number = 0;
 
     private onChangeCallbacks: Set<InteractionCallback> = new Set();
 
     constructor() {}
+
+    public setScrollX(x: number) {
+        this.scrollX = Math.max(0, x);
+        this.notify();
+    }
+
+    public setZoom(zoom: number) {
+        this.zoom = Math.max(10, Math.min(500, zoom));
+        this.notify();
+    }
+
+    public setFollowPlayhead(enabled: boolean) {
+        this.followPlayhead = enabled;
+        this.notify();
+    }
+
+    public setScrubbing(enabled: boolean) {
+        this.isScrubbing = enabled;
+        if (enabled) this.followPlayhead = false; // Manual interaction disables follow
+        this.notify();
+    }
 
     public selectClip(id: number, exclusive: boolean = true) {
         if (exclusive) {
@@ -40,7 +68,6 @@ export class InteractionManager {
     public startClipDrag(clipId: number, startX: number) {
         this.isDraggingClip = true;
         this.draggingClipId = clipId;
-        this.dragStartX = startX;
         this.lastMouseX = startX;
         this.currentDragOffset = 0;
         this.notify();
@@ -57,7 +84,9 @@ export class InteractionManager {
             scrollX: this.scrollX,
             selection: Array.from(this.selection),
             draggingClipId: this.draggingClipId || undefined,
-            dragOffset: this.currentDragOffset
+            dragOffset: this.currentDragOffset,
+            isScrubbing: this.isScrubbing,
+            followPlayhead: this.followPlayhead
         };
     }
 
@@ -76,15 +105,30 @@ export class InteractionManager {
     public handleWheel(e: WheelEvent) {
         e.preventDefault();
 
-        // Zoom: Ctrl/Cmd + Wheel
+        // 1. Zoom: Ctrl/Cmd + Wheel
         if (e.ctrlKey || e.metaKey) {
             const zoomDelta = -e.deltaY * 0.1;
-            const newZoom = Math.max(10, Math.min(500, this.zoom + zoomDelta));
-            this.zoom = newZoom;
+            const prevZoom = this.zoom;
+            this.zoom = Math.max(10, Math.min(500, this.zoom + zoomDelta));
+            
+            // Cursor-centered zoom logic
+            // (cursorX + scrollX) / prevZoom = (cursorX + newScrollX) / newZoom
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            
+            const worldX = (mouseX + this.scrollX) / prevZoom;
+            this.scrollX = (worldX * this.zoom) - mouseX;
+            this.scrollX = Math.max(0, this.scrollX);
         } 
-        // Scroll: Horizontal or Shift + Wheel or just Wheel
+        // 2. Scroll: Horizontal or Shift + Wheel or just Wheel
         else {
-            this.scrollX = Math.max(0, this.scrollX + e.deltaX + e.deltaY);
+            this.followPlayhead = false; // Manual scroll disables follow
+            if (e.shiftKey) {
+                // assume vertical is handled elsewhere or we map it to horizontal for timeline
+                this.scrollX = Math.max(0, this.scrollX + e.deltaY);
+            } else {
+                this.scrollX = Math.max(0, this.scrollX + e.deltaX + e.deltaY);
+            }
         }
         
         this.notify();
@@ -93,6 +137,7 @@ export class InteractionManager {
     public handleMouseDown(e: MouseEvent) {
         if (e.button === 1) { // Middle Click
             this.isDragging = true;
+            this.followPlayhead = false; // Manual drag disables follow
             this.lastMouseX = e.clientX;
         }
     }
@@ -107,6 +152,16 @@ export class InteractionManager {
         } else if (this.isDraggingClip && this.draggingClipId !== null) {
             this.currentDragOffset += deltaX;
             this.notify();
+        } else if (this.isScrubbing) {
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            
+            const pixel = x + this.scrollX;
+            const beat = pixel / this.zoom;
+            const time = beat * (60 / transport.tempo);
+            
+            transport.setTime(time);
+            audioEngine.seek(time);
         }
     }
 

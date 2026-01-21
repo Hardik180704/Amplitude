@@ -2,14 +2,29 @@ import { create } from 'zustand';
 import { initialProject } from './utils/mockProject'; // We'll assume this exists or create it
 
 // Types mirroring Rust Shared types
+export interface MidiNote {
+    start: number;
+    duration: number;
+    note: number;
+    velocity: number;
+}
+
+export type ClipType = 'audio' | 'midi';
+
 export interface ClipData {
     id: number;
+    type: ClipType;
     name: string;
     start: number;
     duration: number;
     offset: number;
     gain_db: number;
     muted: boolean;
+    // Audio specific
+    audioUrl?: string; // Legacy?
+    asset_id?: string;
+    // MIDI specific
+    notes?: MidiNote[];
 }
 
 export type Effect = 
@@ -40,13 +55,18 @@ interface ProjectState {
     isPlaying: boolean;
     setProject: (p: Project) => void;
     updateTrack: (id: number, updates: Partial<TrackData>) => void;
-    addTrack: () => void;
+    addTrack: (name?: string) => void;
     setIsPlaying: (playing: boolean) => void;
     addClip: (trackId: number, clip: ClipData) => void;
     moveClip: (clipId: number, newStart: number, trackId: number) => void;
     addEffect: (trackId: number, effect: Effect) => void;
     removeEffect: (trackId: number, index: number) => void;
     updateEffect: (trackId: number, index: number, effect: Effect) => void;
+    
+    // MIDI Actions
+    addNote: (trackId: number, clipId: number, note: MidiNote) => void;
+    removeNote: (trackId: number, clipId: number, noteStart: number, notePitch: number) => void;
+    updateNote: (trackId: number, clipId: number, oldStart: number, oldPitch: number, newNote: MidiNote) => void;
     
     // Selection
     selectedTrackId: number | null;
@@ -68,14 +88,14 @@ export const useProjectStore = create<ProjectState>((set) => ({
         }
     })),
     
-    addTrack: () => set((state) => {
+    addTrack: (name) => set((state) => {
         const newId = state.project.tracks.length;
         return {
             project: {
                 ...state.project,
                 tracks: [...state.project.tracks, {
                     id: newId,
-                    name: `Track ${newId + 1}`,
+                    name: name || `Track ${newId + 1}`,
                     gain_db: 0,
                     pan: 0,
                     muted: false,
@@ -135,6 +155,47 @@ export const useProjectStore = create<ProjectState>((set) => ({
             tracks: state.project.tracks.map(t => t.id === trackId ? {
                 ...t,
                 effects: t.effects.map((e, i) => i === index ? newEffect : e)
+            } : t)
+        }
+    })),
+
+    addNote: (trackId, clipId, note) => set((state) => ({
+        project: {
+            ...state.project,
+            tracks: state.project.tracks.map(t => t.id === trackId ? {
+                ...t,
+                clips: t.clips.map(c => c.id === clipId ? {
+                    ...c,
+                    notes: [...(c.notes || []), note]
+                } : c)
+            } : t)
+        }
+    })),
+
+    removeNote: (trackId, clipId, noteStart, notePitch) => set((state) => ({
+        project: {
+            ...state.project,
+            tracks: state.project.tracks.map(t => t.id === trackId ? {
+                ...t,
+                clips: t.clips.map(c => c.id === clipId ? {
+                    ...c,
+                    notes: (c.notes || []).filter(n => !(n.start === noteStart && n.note === notePitch))
+                } : c)
+            } : t)
+        }
+    })),
+
+    updateNote: (trackId, clipId, oldStart, oldPitch, newNote) => set((state) => ({
+        project: {
+            ...state.project,
+            tracks: state.project.tracks.map(t => t.id === trackId ? {
+                ...t,
+                clips: t.clips.map(c => c.id === clipId ? {
+                    ...c,
+                    notes: (c.notes || []).map(n => 
+                        (n.start === oldStart && n.note === oldPitch) ? newNote : n
+                    )
+                } : c)
             } : t)
         }
     })),
