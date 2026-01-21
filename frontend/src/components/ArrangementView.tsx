@@ -1,8 +1,7 @@
 import React from 'react';
-import { PianoRoll } from './PianoRoll';
-import { Panel } from './ui/Panel';
 import { Button } from './ui/Button';
 import { useProjectStore } from '../store';
+import { Timeline } from './canvas/Timeline';
 
 export const ArrangementView: React.FC = () => {
     const { project, addTrack } = useProjectStore();
@@ -49,18 +48,14 @@ export const ArrangementView: React.FC = () => {
                 </div>
                 
                 {/* Timeline Grid */}
-                <div className="flex-1 bg-bg-main relative overflow-auto">
-                    {/* Mock Grid Background */}
-                    <div className="absolute inset-0 w-[2000px] h-[1000px]" style={{
-                        backgroundImage: 'linear-gradient(to right, #2a2a35 1px, transparent 1px)',
-                        backgroundSize: '100px 100%'
-                    }}></div>
+                <div className="flex-1 bg-bg-main relative overflow-hidden">
+                    <Timeline zoom={100} scrollX={0} />
                     
-                    {/* Mock Piano Roll integrated */}
-                    <div className="absolute top-2 left-2 p-2">
-                         <Panel title="Active Clip: Synth Melody">
-                             <PianoRoll notes={[]} width={600} height={150} />
-                         </Panel>
+                    {/* Mock Piano Roll integrated (Floating for now) */}
+                    <div className="absolute top-10 left-10 p-2 shadow-xl opacity-80 pointer-events-none">
+                         <div className="bg-bg-panel/50 p-2 rounded border border-border-subtle text-xs text-text-secondary">
+                            Clip Overlay (Placeholder)
+                         </div>
                     </div>
                 </div>
           </div>
