@@ -8,6 +8,11 @@ pub enum MixerCommand {
     SetTrackSolo { track_id: u32, soloed: bool },
     AddTrack,
     DeleteTrack { track_id: u32 },
+    
+    // Effect Commands
+    AddEffect { track_id: u32, effect_type: String }, // "EQ", "DELAY", "COMP"
+    SetEffectParam { track_id: u32, effect_index: usize, param_id: u32, value: f32 },
+    
     Play,
     Stop,
 }
