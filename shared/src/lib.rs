@@ -13,6 +13,10 @@ pub enum MixerCommand {
     AddEffect { track_id: u32, effect_type: String }, // "EQ", "DELAY", "COMP"
     SetEffectParam { track_id: u32, effect_index: usize, param_id: u32, value: f32 },
     
+    // MIDI Commands
+    NoteOn { track_id: u32, note: u8, velocity: u8 },
+    NoteOff { track_id: u32, note: u8 },
+    
     Play,
     Stop,
 }
