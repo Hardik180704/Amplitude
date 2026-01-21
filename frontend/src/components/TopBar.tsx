@@ -81,6 +81,31 @@ export const TopBar: React.FC<TopBarProps> = ({ onExportClick, onSettingsClick }
                      </div>
                     <span className="text-xs font-bold tracking-[0.1em] uppercase opacity-70 group-hover:opacity-100 transition-opacity hidden xl:inline">Search</span>
                 </div>
+
+                {/* View Toggle */}
+                <div className="h-6 w-[1px] bg-white/10 mx-2"></div>
+                <div className="flex bg-[#09090b] rounded-lg p-0.5 border border-white/10 shadow-inner">
+                    <button 
+                        onClick={() => useProjectStore.getState().setViewMode('DAW')}
+                        className={`px-3 py-1 rounded text-[10px] font-bold tracking-wider transition-all ${
+                            useProjectStore((s) => s.viewMode) === 'DAW' 
+                            ? 'bg-accent-primary text-white shadow-sm' 
+                            : 'text-text-muted hover:text-white'
+                        }`}
+                    >
+                        DAW
+                    </button>
+                    <button 
+                        onClick={() => useProjectStore.getState().setViewMode('DJ')}
+                        className={`px-3 py-1 rounded text-[10px] font-bold tracking-wider transition-all ${
+                            useProjectStore((s) => s.viewMode) === 'DJ' 
+                            ? 'bg-accent-primary text-white shadow-sm' 
+                            : 'text-text-muted hover:text-white'
+                        }`}
+                    >
+                        DJ
+                    </button>
+                </div>
                 
                 {/* Divider */}
                 <div className="h-4 w-[1px] bg-white/10"></div>

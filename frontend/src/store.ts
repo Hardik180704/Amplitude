@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { initialProject } from './utils/mockProject'; // We'll assume this exists or create it
+import { audioEngine } from './audio/AudioEngine';
 
 // Types mirroring Rust Shared types
 export interface MidiNote {
@@ -42,6 +43,11 @@ export interface TrackData {
     soloed: boolean;
     clips: ClipData[];
     effects: Effect[];
+    // DJ State
+    filter?: number; // -1 to 1
+    eq?: { low: number; mid: number; high: number };
+    crossfaderGroup?: 'A' | 'B' | 'Thru';
+    playbackRate?: number;
 }
 
 export interface Project {
@@ -71,26 +77,53 @@ interface ProjectState {
     // Selection
     selectedTrackId: number | null;
     setSelectedTrack: (id: number | null) => void;
-}
+    
+    // Global DJ State
+    crossfaderPosition: number; // -1 to 1
+    viewMode: 'DAW' | 'DJ';
+    setCrossfaderPosition: (pos: number) => void;
+    setTrackCrossfaderGroup: (trackId: number, group: 'A' | 'B' | 'Thru') => void;
+    setViewMode: (mode: 'DAW' | 'DJ') => void;
 
+    // Performance
+    setTrackFxStutter: (trackId: number, enabled: boolean) => void;
+    setTrackFxTapeStop: (trackId: number, enabled: boolean) => void;
+    setTrackLoop: (trackId: number, enabled: boolean, lengthBeats?: number) => void;
+}
+    
 export const useProjectStore = create<ProjectState>((set) => ({
     project: initialProject,
     isPlaying: false,
+    crossfaderPosition: 0,
+    viewMode: 'DAW',
     
     setProject: (project) => set({ project }),
+    setViewMode: (mode) => set({ viewMode: mode }),
     
     setIsPlaying: (isPlaying) => set({ isPlaying }),
     
-    updateTrack: (id, updates) => set((state) => ({
-        project: {
-            ...state.project,
-            tracks: state.project.tracks.map(t => t.id === id ? { ...t, ...updates } : t)
+    updateTrack: (id, updates) => {
+        // Granular Audio Engine Updates
+        if (updates.gain_db !== undefined) audioEngine.setTrackGain(id, updates.gain_db);
+        if (updates.pan !== undefined) audioEngine.setTrackPan(id, updates.pan);
+        if (updates.filter !== undefined) audioEngine.setTrackFilter(id, updates.filter);
+        if (updates.eq !== undefined) {
+             const { low, mid, high } = updates.eq;
+             audioEngine.setTrackEq(id, low, mid, high);
         }
-    })),
+        if (updates.playbackRate !== undefined) audioEngine.setTrackPlaybackRate(id, updates.playbackRate);
+        
+        set((state) => ({
+            project: {
+                ...state.project,
+                tracks: state.project.tracks.map(t => t.id === id ? { ...t, ...updates } : t)
+            }
+        }));
+    },
     
     addTrack: (name) => set((state) => {
         const newId = state.project.tracks.length;
-        return {
+        const nextState = {
             project: {
                 ...state.project,
                 tracks: [...state.project.tracks, {
@@ -101,24 +134,32 @@ export const useProjectStore = create<ProjectState>((set) => ({
                     muted: false,
                     soloed: false,
                     clips: [],
-                    effects: []
+                    effects: [],
+                    filter: 0,
+                    eq: { low: 1, mid: 1, high: 1 }
                 }]
             }
         };
+        audioEngine.loadProject(JSON.stringify(nextState.project));
+        return nextState;
     }),
 
-    addClip: (trackId, clip) => set((state) => ({
-        project: {
-            ...state.project,
-            tracks: state.project.tracks.map(t => t.id === trackId ? {
-                ...t,
-                clips: [...t.clips, clip]
-            } : t)
-        }
-    })),
+    addClip: (trackId, clip) => set((state) => {
+        const nextState = {
+            project: {
+                ...state.project,
+                tracks: state.project.tracks.map(t => t.id === trackId ? {
+                    ...t,
+                    clips: [...t.clips, clip]
+                } : t)
+            }
+        };
+        audioEngine.loadProject(JSON.stringify(nextState.project));
+        return nextState;
+    }),
 
     moveClip: (clipId, newStart, trackId) => set((state) => {
-        return {
+        const nextState = {
             project: {
                 ...state.project,
                 tracks: state.project.tracks.map(t => t.id === trackId ? {
@@ -127,79 +168,151 @@ export const useProjectStore = create<ProjectState>((set) => ({
                 } : t)
             }
         };
+        audioEngine.loadProject(JSON.stringify(nextState.project));
+        return nextState;
     }),
 
-    addEffect: (trackId, effect) => set((state) => ({
-        project: {
-            ...state.project,
-            tracks: state.project.tracks.map(t => t.id === trackId ? {
-                ...t,
-                effects: [...t.effects, effect]
-            } : t)
-        }
-    })),
+    addEffect: (trackId, effect) => set((state) => {
+        const nextState = {
+            project: {
+                ...state.project,
+                tracks: state.project.tracks.map(t => t.id === trackId ? {
+                    ...t,
+                    effects: [...t.effects, effect]
+                } : t)
+            }
+        };
+        // Update Engine (requires sending FULL effect list for that track)
+        const track = nextState.project.tracks.find(t => t.id === trackId);
+        if (track) audioEngine.updateTrackEffects(trackId, track.effects);
+        
+        return nextState;
+    }),
 
-    removeEffect: (trackId, index) => set((state) => ({
-        project: {
-            ...state.project,
-            tracks: state.project.tracks.map(t => t.id === trackId ? {
-                ...t,
-                effects: t.effects.filter((_, i) => i !== index)
-            } : t)
-        }
-    })),
+    removeEffect: (trackId, index) => set((state) => {
+        const nextState = {
+            project: {
+                ...state.project,
+                tracks: state.project.tracks.map(t => t.id === trackId ? {
+                    ...t,
+                    effects: t.effects.filter((_, i) => i !== index)
+                } : t)
+            }
+        };
+        const track = nextState.project.tracks.find(t => t.id === trackId);
+        if (track) audioEngine.updateTrackEffects(trackId, track.effects);
+        
+        return nextState;
+    }),
 
-    updateEffect: (trackId, index, newEffect) => set((state) => ({
-        project: {
-            ...state.project,
-            tracks: state.project.tracks.map(t => t.id === trackId ? {
-                ...t,
-                effects: t.effects.map((e, i) => i === index ? newEffect : e)
-            } : t)
-        }
-    })),
+    updateEffect: (trackId, index, newEffect) => set((state) => {
+        const nextState = {
+            project: {
+                ...state.project,
+                tracks: state.project.tracks.map(t => t.id === trackId ? {
+                    ...t,
+                    effects: t.effects.map((e, i) => i === index ? newEffect : e)
+                } : t)
+            }
+        };
+        const track = nextState.project.tracks.find(t => t.id === trackId);
+        if (track) audioEngine.updateTrackEffects(trackId, track.effects);
+        
+        return nextState;
+    }),
 
-    addNote: (trackId, clipId, note) => set((state) => ({
-        project: {
-            ...state.project,
-            tracks: state.project.tracks.map(t => t.id === trackId ? {
-                ...t,
-                clips: t.clips.map(c => c.id === clipId ? {
-                    ...c,
-                    notes: [...(c.notes || []), note]
-                } : c)
-            } : t)
-        }
-    })),
+    addNote: (trackId, clipId, note) => set((state) => {
+        const nextState = {
+            project: {
+                ...state.project,
+                tracks: state.project.tracks.map(t => t.id === trackId ? {
+                    ...t,
+                    clips: t.clips.map(c => c.id === clipId ? {
+                        ...c,
+                        notes: [...(c.notes || []), note]
+                    } : c)
+                } : t)
+            }
+        };
+        // Ideally granular, but reload is safe for now
+        audioEngine.loadProject(JSON.stringify(nextState.project)); 
+        return nextState;
+    }),
 
-    removeNote: (trackId, clipId, noteStart, notePitch) => set((state) => ({
-        project: {
-            ...state.project,
-            tracks: state.project.tracks.map(t => t.id === trackId ? {
-                ...t,
-                clips: t.clips.map(c => c.id === clipId ? {
-                    ...c,
-                    notes: (c.notes || []).filter(n => !(n.start === noteStart && n.note === notePitch))
-                } : c)
-            } : t)
-        }
-    })),
+    removeNote: (trackId, clipId, noteStart, notePitch) => set((state) => {
+         const nextState = {
+            project: {
+                ...state.project,
+                tracks: state.project.tracks.map(t => t.id === trackId ? {
+                    ...t,
+                    clips: t.clips.map(c => c.id === clipId ? {
+                        ...c,
+                        notes: (c.notes || []).filter(n => !(n.start === noteStart && n.note === notePitch))
+                    } : c)
+                } : t)
+            }
+        };
+        audioEngine.loadProject(JSON.stringify(nextState.project));
+        return nextState;
+    }),
 
-    updateNote: (trackId, clipId, oldStart, oldPitch, newNote) => set((state) => ({
-        project: {
-            ...state.project,
-            tracks: state.project.tracks.map(t => t.id === trackId ? {
-                ...t,
-                clips: t.clips.map(c => c.id === clipId ? {
-                    ...c,
-                    notes: (c.notes || []).map(n => 
-                        (n.start === oldStart && n.note === oldPitch) ? newNote : n
-                    )
-                } : c)
-            } : t)
-        }
-    })),
+    updateNote: (trackId, clipId, oldStart, oldPitch, newNote) => set((state) => {
+        const nextState = {
+            project: {
+                ...state.project,
+                tracks: state.project.tracks.map(t => t.id === trackId ? {
+                    ...t,
+                    clips: t.clips.map(c => c.id === clipId ? {
+                        ...c,
+                        notes: (c.notes || []).map(n => 
+                            (n.start === oldStart && n.note === oldPitch) ? newNote : n
+                        )
+                    } : c)
+                } : t)
+            }
+        };
+        audioEngine.loadProject(JSON.stringify(nextState.project));
+        return nextState;
+    }),
 
     selectedTrackId: null,
-    setSelectedTrack: (id) => set({ selectedTrackId: id })
+    setSelectedTrack: (id) => set({ selectedTrackId: id }),
+    
+    setCrossfaderPosition: (pos) => {
+        audioEngine.setCrossfaderPosition(pos);
+        set({ crossfaderPosition: pos });
+    },
+    
+    setTrackCrossfaderGroup: (trackId, group) => {
+        audioEngine.setTrackCrossfaderGroup(trackId, group);
+        set((state) => ({
+             project: {
+                ...state.project,
+                tracks: state.project.tracks.map(t => t.id === trackId ? { ...t, crossfaderGroup: group } : t)
+            }
+        }));
+    },
+    
+    setTrackFxStutter: (trackId, enabled) => {
+        audioEngine.setTrackFxStutter(trackId, enabled);
+    },
+    
+    setTrackFxTapeStop: (trackId, enabled) => {
+        audioEngine.setTrackFxTapeStop(trackId, enabled);
+    },
+    
+    setTrackLoop: (trackId, enabled, lengthBeats = 4) => {
+        set((state) => {
+            if (enabled) {
+                // Cast to any to access bpm if missing from type definition
+                const bpm = (state.project as any).bpm || 120;
+                const secondsPerBeat = 60 / bpm;
+                const loopSeconds = lengthBeats * secondsPerBeat;
+                audioEngine.startTrackLoopSeconds(trackId, loopSeconds);
+            } else {
+                 audioEngine.startTrackLoopSeconds(trackId, 0);
+            }
+            return {};
+        });
+    }
 }));

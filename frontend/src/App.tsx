@@ -4,6 +4,7 @@ import { Panel } from './components/ui/Panel';
 import { MixerPanel } from './components/MixerPanel';
 import { ArrangementView } from './components/ArrangementView';
 import { EffectRack } from './components/EffectRack';
+import { DJPerformanceView } from './components/DJPerformanceView';
 import { ExportModal } from './components/modals/ExportModal';
 import { SettingsModal } from './components/modals/SettingsModal';
 import React, { useState, useEffect } from 'react';
@@ -57,8 +58,10 @@ function App() {
         });
         
         // Subscribe to Project Changes (Sync to Engine & Transport)
+        // Subscribe to Project Changes (Sync to Engine & Transport)
         const unsubStore = useProjectStore.subscribe((state) => {
-            audioEngine.loadProject(JSON.stringify(state.project));
+             // Granular updates are handled by the store actions now.
+             // We only sync Tempo here as it's global and rare.
             transport.setTempo(state.project.tempo);
         });
 
@@ -103,7 +106,10 @@ function App() {
             const durationSamples = Math.floor(audioBuffer.duration * 44100);
             
             // Load into Engine (and cache buffer)
-            audioEngine.loadSample(file.name, audioBuffer.getChannelData(0), audioBuffer.getChannelData(1), audioBuffer);
+            const left = audioBuffer.getChannelData(0);
+            const right = audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1) : left;
+            
+            audioEngine.loadSample(file.name, left, right, audioBuffer);
             
             // 3. Create Clip
             const newClip = {
@@ -177,6 +183,35 @@ function App() {
             interactionManager.selectClip(newClip.id);
         }
     };
+
+    const { viewMode } = useProjectStore();
+
+    if (viewMode === 'DJ') {
+        return (
+             <div className="flex flex-col h-screen w-screen overflow-hidden bg-bg-main text-text-primary">
+                <div className="h-14 shrink-0 border-b border-white/5 z-50">
+                     <TopBar onExportClick={() => setIsExportOpen(true)} onSettingsClick={() => setIsSettingsOpen(true)} />
+                </div>
+                <div className="flex-1 min-h-0 relative">
+                    <DJPerformanceView />
+                </div>
+                
+                {/* Modals still available */}
+                 <ExportModal 
+                    isOpen={isExportOpen} 
+                    onClose={() => setIsExportOpen(false)} 
+                    onExport={(settings) => {
+                        console.log('Exporting...', settings);
+                        setIsExportOpen(false);
+                    }} 
+                />
+                <SettingsModal 
+                    isOpen={isSettingsOpen} 
+                    onClose={() => setIsSettingsOpen(false)} 
+                />
+             </div>
+        );
+    }
 
     return (
         <>
