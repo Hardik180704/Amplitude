@@ -4,6 +4,7 @@ interface KnobProps {
     value: number;
     min?: number;
     max?: number;
+    step?: number;
     label?: string;
     onChange: (val: number) => void;
     size?: number;
