@@ -4,10 +4,21 @@
 
 ![Status](https://img.shields.io/badge/Status-Pre--Alpha-orange)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
-![Tech](https://img.shields.io/badge/Stack-Rust%20%7C%20WASM%20%7C%20React-blueviolet)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
 **Amplitude** is a high-performance Digital Audio Workstation (DAW) running entirely in the browser. It bridges the gap between native desktop audio capability and the web's accessibility by leveraging a **Lock-Free Rust Audio Engine** compiled to WebAssembly.
+
+---
+
+## 🛠️ Built With
+
+<div align="center">
+
+| Core Engine | Frontend | Backend & Infra |
+|:-----------:|:--------:|:---------------:|
+| ![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white) <br> ![WebAssembly](https://img.shields.io/badge/WebAssembly-654FF0?style=for-the-badge&logo=webassembly&logoColor=white) | ![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB) <br> ![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white) <br> ![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white) | ![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white) <br> ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white) |
+
+</div>
 
 ---
 
@@ -21,7 +32,7 @@
 
 ---
 
-## 🛠️ Technology Stack
+## 🛠️ Technology Stack Breakdown
 
 ### Core Audio Engine
 *   **Language**: **Rust** (Safety, Performance, SIMD)
