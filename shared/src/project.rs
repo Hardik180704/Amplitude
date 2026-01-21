@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::midi::MidiClip; // We need to move MidiClip to shared or make a shared version
+
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Project {

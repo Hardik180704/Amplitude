@@ -3,6 +3,20 @@ pub use project::*;
 
 use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "type", content = "payload")]
+pub enum Action {
+    // Project State
+    UpdateTrack(TrackData),
+    AddClip { track_id: usize, clip: ClipData },
+    MoveClip { clip_id: usize, new_start: u64, track_id: usize },
+    
+    // Transport
+    Play,
+    Stop,
+    Seek(f64), // Seconds
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub enum MixerCommand {
     SetTrackGain { track_id: u32, gain: f32 },

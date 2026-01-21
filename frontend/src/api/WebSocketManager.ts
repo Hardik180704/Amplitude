@@ -2,6 +2,7 @@ import { useProjectStore } from '../store';
 
 type WebSocketMessage = 
     | { type: 'StateUpdate', payload: any }
+    | { type: 'Init', payload: any }
     | { type: 'Error', message: string };
 
 export class WebSocketManager {
@@ -64,16 +65,44 @@ export class WebSocketManager {
         this.ws.send(JSON.stringify({ type: action, payload }));
     }
 
+import { AudioContextManager } from '../audio/AudioContextManager';
+
+// ... 
+
     private handleMessage(msg: WebSocketMessage) {
         switch (msg.type) {
             case 'StateUpdate':
-                // Directly sync store? Or dispatch specific action?
-                // For now, let's just log. In real impl, we'd merging state.
-                console.log('Received State Update:', msg.payload);
-                // useProjectStore.getState().setProject(msg.payload); // Needs careful handling to avoid loops
+                // Parse the internal payload string (if it's double-serialized)
+                try {
+                     // If payload is a string (Wait, backend sends "Echo: JSONString")
+                     // We need to match the backend protocol carefully.
+                     // Current Backend: "{\"type\": \"StateUpdate\", \"payload\": \"Echo: " + text + "\"}"
+                     // Actually, my backend code sends: text directly if it's an action broadcast.
+                     
+                     // Let's assume the backend broadcasts the raw Action JSON back.
+                     // The "Echo" logic in my previous backend step was:
+                     // let _ = tx.send(text); -> This sends the raw JSON string of the Action.
+                     
+                     const action = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;
+                     console.log('WS Action:', action);
+
+                     if (action.type === 'Play') {
+                         AudioContextManager.getInstance().sendCommand('Play', {});
+                     } else if (action.type === 'Stop') {
+                         AudioContextManager.getInstance().sendCommand('Stop', {});
+                     }
+                     // TODO: Handle UpdateTrack, AddClip etc.
+                } catch(e) {
+                    console.error('Error handling WS action', e);
+                }
                 break;
             case 'Error':
                 console.error('Backend Error:', msg.message);
+                break;
+             // Handle "Init"
+             case 'Init' as any: 
+                console.log('Initializing Project State:', msg.payload);
+                // useProjectStore.getState().setProject(msg.payload);
                 break;
         }
     }

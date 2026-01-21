@@ -1,18 +1,32 @@
 use axum::{
-    routing::{get, post},
+    routing::get,
     Json, Router, extract::Query,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::fs;
-use std::path::Path;
 use shared::Project;
+
+mod ws;
+
+use std::sync::Arc;
+use tokio::sync::broadcast;
+// RwLock is used inside ws::AppState, but we invoke new here
 
 #[tokio::main]
 async fn main() {
+    // 1. Create Shared State
+    let (tx, _rx) = broadcast::channel(100);
+    let project = Arc::new(tokio::sync::RwLock::new(Project::default()));
+    
+    let app_state = Arc::new(ws::AppState { tx, project });
+
     let app = Router::new()
         .route("/", get(root))
         .route("/api/projects", get(list_projects).post(save_project))
-        .route("/api/projects/load", get(load_project));
+        .route("/api/projects/load", get(load_project))
+        // WS Route
+        .route("/ws", get(ws::ws_handler))
+        .with_state(app_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("Backend listening on {}", listener.local_addr().unwrap());
