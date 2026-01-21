@@ -142,3 +142,36 @@ impl Mixer {
         // TODO: Hard Limiter here to prevent clipping
     }
 }
+
+use shared::{Project, ClipData};
+
+impl Mixer {
+     pub fn load_project(&mut self, project: &Project, sample_rate: f32) {
+        self.tracks.clear();
+        
+        for track_data in &project.tracks {
+            let mut track = Track::new(track_data.id);
+            track.gain_node.set_gain(shared::db_to_linear(track_data.gain_db));
+            track.pan = track_data.pan;
+            track.muted = track_data.muted;
+            track.soloed = track_data.soloed;
+            
+            // Hydrate Clips
+            for clip_data in &track_data.clips {
+                match clip_data {
+                    ClipData::Audio { start, duration, offset, asset_id } => {
+                       track.clips.push(Clip {
+                           start_time: *start,
+                           duration: *duration,
+                           offset: *offset,
+                           asset_id: asset_id.clone(),
+                       });
+                    },
+                    _ => {} // Handle Midi clips later or in SynthNode
+                }
+            }
+            
+            self.tracks.push(track);
+        }
+    }
+}
