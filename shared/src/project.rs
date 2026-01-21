@@ -45,17 +45,30 @@ pub struct TrackData {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(tag = "type", rename_all = "lowercase")] // Flattened structure with 'type' discriminator
 pub enum ClipData {
     Audio {
+        id: u64,
+        name: String,
         start: u64,
         duration: u64,
         offset: u64,
         asset_id: String,
+        #[serde(default)]
+        muted: bool,
+        #[serde(default)]
+        gain_db: f32,
     },
     Midi {
+        id: u64,
+        name: String,
         start: u64,
         duration: u64,
         notes: Vec<MidiNoteData>,
+        #[serde(default)]
+        muted: bool,
+        #[serde(default)]
+        gain_db: f32,
     }
 }
 
