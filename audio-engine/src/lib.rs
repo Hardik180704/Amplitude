@@ -9,6 +9,7 @@ pub mod analysis;
 pub mod dsp;
 pub mod midi;
 pub mod synth;
+pub mod export;
 pub use processor::WasmAudioProcessor;
 
 #[wasm_bindgen]
