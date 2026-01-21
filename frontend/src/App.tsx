@@ -5,20 +5,67 @@ import { MixerPanel } from './components/MixerPanel';
 import { ArrangementView } from './components/ArrangementView';
 import { EffectRack } from './components/EffectRack';
 import { ExportModal } from './components/modals/ExportModal';
+import { SettingsModal } from './components/modals/SettingsModal';
 import React, { useState, useEffect } from 'react';
 import { WebSocketManager } from './api/WebSocketManager';
 import { useProjectStore, type Effect } from './store';
 import './App.css';
 
+import { PianoRollCanvas } from './components/canvas/PianoRollCanvas';
+import { interactionManager } from './interactions/InteractionManager';
+import { audioEngine } from './audio/AudioEngine';
+import { transport } from './audio/TransportManager';
+
 function App() {
 
     const [isExportOpen, setIsExportOpen] = useState(false);
-    const { addEffect, selectedTrackId, addClip } = useProjectStore();
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const { addEffect, selectedTrackId, addClip, project } = useProjectStore();
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+    
+    const [viewState, setViewState] = useState(interactionManager.getState());
+
+    useEffect(() => {
+        const unsub = interactionManager.subscribe(setViewState);
+        return () => { unsub(); };
+    }, []);
+
+    // Helper: Clip Resolution
+    const selectedClipId = viewState.selection.length === 1 ? viewState.selection[0] : null;
+    let selectedClip = null;
+    let selectedClipTrackId = -1;
+
+    if (selectedClipId) {
+        for (const track of project.tracks) {
+            const c = track.clips.find(clip => clip.id === selectedClipId);
+            if (c) {
+                selectedClip = c;
+                selectedClipTrackId = track.id;
+                break;
+            }
+        }
+    }
 
     useEffect(() => {
         // Initialize WebSocket Connection
         WebSocketManager.getInstance().connect();
+        
+        // Initialize Audio Engine
+        audioEngine.init().then(() => {
+            // Initial Sync
+            audioEngine.loadProject(JSON.stringify(useProjectStore.getState().project));
+        });
+        
+        // Subscribe to Project Changes (Sync to Engine & Transport)
+        const unsubStore = useProjectStore.subscribe((state) => {
+            audioEngine.loadProject(JSON.stringify(state.project));
+            transport.setTempo(state.project.tempo);
+        });
+
+        // Initial Tempo Sync
+        transport.setTempo(useProjectStore.getState().project.tempo);
+        
+        return () => { unsubStore(); };
     }, []);
 
 
@@ -34,40 +81,56 @@ function App() {
         const store = useProjectStore.getState();
         store.addTrack(); 
         
-        // Sync is tricky with zustand in event handler. Let's assume sync for now or use the updated state.
-        
-        // Actually, let's use the 'addTrack' from hook, but we need the ID. 
-        // The simple mock store implementation of addTrack doesn't return ID. 
-        // We'll read the store again after adding.
         const updatedStore = useProjectStore.getState();
         const createdTrack = updatedStore.project.tracks[updatedStore.project.tracks.length - 1];
 
         if (!createdTrack) return;
-
-        // 2. Decode Audio (to get duration)
-        // For now, mock duration to ensure "Real Time" responsiveness if decoding is slow
-        // or just fire it.
-        const duration = 10; // Default 10s if decoding fails or just mock
         
-        // 3. Create Clip
-        const newClip = {
-            id: Date.now(),
-            name: file.name,
-            start: 0,
-            duration: duration, // We should try to decode real duration if possible
-            offset: 0,
-            gain_db: 0,
-            muted: false
-        };
+        // 2. Read and Decode Audio (Pro Import)
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const ctx = audioEngine.getContext();
+            
+            if (!ctx) {
+                console.error("Audio Context not initialized");
+                return;
+            }
+            
+            const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
 
-        addClip(createdTrack.id, newClip);
-        
-        // 4. Notify Backend
-        WebSocketManager.getInstance().send('ImportFile', { 
-            track_id: createdTrack.id, 
-            file_name: file.name,
-            size: file.size
-        });
+            // Clip duration is in samples.
+            // Engine sample rate is default 44100.
+            const durationSamples = Math.floor(audioBuffer.duration * 44100);
+            
+            // Load into Engine (and cache buffer)
+            audioEngine.loadSample(file.name, audioBuffer.getChannelData(0), audioBuffer.getChannelData(1), audioBuffer);
+            
+            // 3. Create Clip
+            const newClip = {
+                id: Date.now(),
+                name: file.name,
+                start: 0,
+                duration: durationSamples,
+                offset: 0,
+                gain_db: 0,
+                muted: false,
+                type: 'audio' as const,
+                asset_id: file.name
+            };
+
+            addClip(createdTrack.id, newClip);
+            
+            // 4. Notify Backend (Metadata only)
+            WebSocketManager.getInstance().send('ImportFile', { 
+                track_id: createdTrack.id, 
+                file_name: file.name,
+                size: file.size
+            });
+            
+        } catch (err) {
+            console.error("Error importing file:", err);
+            alert("Failed to import audio file.");
+        }
 
         // Reset input
         e.target.value = '';
@@ -90,19 +153,44 @@ function App() {
         WebSocketManager.getInstance().send('AddEffect', { track_id: selectedTrackId, effect: newEffect });
     };
 
+    const handleAddInstrument = (name: string) => {
+        const store = useProjectStore.getState();
+        store.addTrack(name);
+        
+        // Auto-create empty MIDI Clip
+        const newTrack = store.project.tracks[store.project.tracks.length - 1]; // We really need addTrack to return ID or Track
+        if (newTrack) {
+             const newClip = {
+                id: Date.now(),
+                name: `${name} Clip`,
+                start: 0,
+                duration: 4 * (44100 * 60 / 120), // 4 beats (1 bar) * samplesPerBeat
+                offset: 0,
+                gain_db: 0,
+                muted: false,
+                type: 'midi' as const,
+                notes: []
+            };
+            store.addClip(newTrack.id, newClip);
+            
+            // Auto-select the clip to show Piano Roll immediately
+            interactionManager.selectClip(newClip.id);
+        }
+    };
+
     return (
         <>
             <AppShell 
-                header={<TopBar onExportClick={() => setIsExportOpen(true)} />}
+                header={<TopBar onExportClick={() => setIsExportOpen(true)} onSettingsClick={() => setIsSettingsOpen(true)} />}
         sidebar={
                 <div className="p-4 space-y-4">
                     <Panel title="Instruments">
                         <div className="space-y-2 text-sm text-text-secondary">
                              {/* Placeholder logic for now - user asked about instruments too */}
-                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer" onClick={() => console.log("Add Keyboard")}>Keyboards</div>
-                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer">Drums</div>
-                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer">Guitars</div>
-                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer">Bass</div>
+                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer" onClick={() => handleAddInstrument("Keys")}>Keyboards</div>
+                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer" onClick={() => handleAddInstrument("Drums")}>Drums</div>
+                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer" onClick={() => handleAddInstrument("Guitar")}>Guitars</div>
+                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer" onClick={() => handleAddInstrument("Bass")}>Bass</div>
                         </div>
                     </Panel>
                     <Panel title="Effects">
@@ -176,7 +264,19 @@ function App() {
                     )}
                 </div>
             }
-            bottomPanel={null}
+            bottomPanel={
+                selectedClip && selectedClip.type === 'midi' && selectedClipTrackId !== -1 ? (
+                    <div className="h-64 border-t border-border-subtle bg-bg-main relative">
+                         {/* Header / Toolbar for Editor */}
+                         <div className="absolute top-0 left-0 right-0 h-6 flex items-center px-2 bg-bg-header border-b border-border-subtle z-10 text-xs text-text-secondary">
+                            <span>{selectedClip.name}</span>
+                         </div>
+                         <div className="pt-6 h-full"> 
+                            <PianoRollCanvas clipId={selectedClip.id} trackId={selectedClipTrackId} />
+                         </div>
+                    </div>
+                ) : null
+            }
         />
         <ExportModal 
             isOpen={isExportOpen} 
@@ -186,6 +286,10 @@ function App() {
                 setIsExportOpen(false);
                 // TODO: Send to Backend
             }} 
+        />
+        <SettingsModal 
+            isOpen={isSettingsOpen} 
+            onClose={() => setIsSettingsOpen(false)} 
         />
         </>
     );
