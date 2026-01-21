@@ -43,7 +43,7 @@ export const Timeline: React.FC = () => {
         ctx.translate(-scrollX, 0);
 
         // 1. Render Tracks & Clips (Underlay)
-        ClipRenderer.renderTracks(ctx, project, width + scrollX, height, scrollX, zoom);
+        ClipRenderer.renderTracks(ctx, project, width + scrollX, height, scrollX, zoom, viewState.selection);
         
         // 2. Render Grid (Overlay)
         
@@ -96,7 +96,24 @@ export const Timeline: React.FC = () => {
         <CanvasView 
             onRender={render} 
             className="w-full h-full cursor-crosshair"
-            onMouseDown={(e) => interactionManager.handleMouseDown(e.nativeEvent)}
+import { HitTest } from '../../canvas/HitTest';
+
+// ... (in Timeline component return) ...
+
+            onMouseDown={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const hit = HitTest.getClipAt(project, x, y, scrollX, zoom);
+                if (hit) {
+                    interactionManager.selectClip(hit.clip.id, !e.shiftKey);
+                    // TODO: Start Drag
+                } else {
+                    if (!e.shiftKey) interactionManager.clearSelection();
+                    interactionManager.handleMouseDown(e.nativeEvent);
+                }
+            }}
             onMouseMove={(e) => interactionManager.handleMouseMove(e.nativeEvent)}
             onMouseUp={(e) => interactionManager.handleMouseUp(e.nativeEvent)}
             onWheel={(e) => interactionManager.handleWheel(e.nativeEvent)}

@@ -16,6 +16,19 @@ export class InteractionManager {
 
     constructor() {}
 
+    public selectClip(id: number, exclusive: boolean = true) {
+        if (exclusive) {
+            this.selection.clear();
+        }
+        this.selection.add(id);
+        this.notify();
+    }
+    
+    public clearSelection() {
+        this.selection.clear();
+        this.notify();
+    }
+    
     public getState(): InteractionState {
         return {
             zoom: this.zoom,

@@ -8,6 +8,7 @@ export const ClipRenderer = {
         _height: number, 
         scrollX: number, 
         zoom: number,
+        selection: number[], // Array of selected IDs
         trackHeight: number = 96
     ) => {
         // Calculate visible range (Unused for now, but ready for logic)
@@ -53,8 +54,10 @@ export const ClipRenderer = {
                 // Horizontal Culling
                 if (x + w < 0 || x > width) return;
                 
+                const isSelected = selection.includes(clip.id);
+                
                 // Draw Clip Rect
-                renderClipRect(ctx, x, trackTop + 2, w, trackHeight - 4, clip.name);
+                renderClipRect(ctx, x, trackTop + 2, w, trackHeight - 4, clip.name, isSelected);
             });
             
             // Draw Separator
@@ -70,15 +73,16 @@ const renderClipRect = (
     y: number, 
     w: number, 
     h: number, 
-    label: string
+    label: string,
+    isSelected: boolean = false
 ) => {
     // Body
-    ctx.fillStyle = '#272730'; // bg-bg-hover
+    ctx.fillStyle = isSelected ? '#3f3f4e' : '#272730'; // Highlight if selected
     ctx.fillRect(x, y, w, h);
     
     // Border
-    ctx.strokeStyle = '#00afdb'; // accent-primary
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = isSelected ? '#ffffff' : '#00afdb'; 
+    ctx.lineWidth = isSelected ? 2 : 1;
     ctx.strokeRect(x, y, w, h);
     
     // Header Bar
