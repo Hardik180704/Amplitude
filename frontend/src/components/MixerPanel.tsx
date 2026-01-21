@@ -1,5 +1,3 @@
-import React from 'react';
-import { MixerChannel } from './MixerChannel';
 import { useProjectStore } from '../store';
 import { Knob } from './ui/Knob';
 

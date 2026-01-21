@@ -1,6 +1,6 @@
 import { AppShell } from './components/layout/AppShell';
 import { TopBar } from './components/TopBar';
-import { LibraryPanel } from './components/LibraryPanel';
+import { Panel } from './components/ui/Panel';
 import { MixerPanel } from './components/MixerPanel';
 import { ArrangementView } from './components/ArrangementView';
 import './App.css';
