@@ -12,6 +12,8 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 // RwLock is used inside ws::AppState, but we invoke new here
 
+mod export_handler;
+
 #[tokio::main]
 async fn main() {
     // 1. Create Shared State
@@ -24,6 +26,7 @@ async fn main() {
         .route("/", get(root))
         .route("/api/projects", get(list_projects).post(save_project))
         .route("/api/projects/load", get(load_project))
+        .route("/api/export", axum::routing::post(export_handler::export_project))
         // WS Route
         .route("/ws", get(ws::ws_handler))
         .with_state(app_state);
