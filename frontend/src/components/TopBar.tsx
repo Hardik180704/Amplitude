@@ -5,7 +5,11 @@ import { Button } from './ui/Button';
 
 // Icons (Inline SVGs used in render)
 
-export const TopBar: React.FC = () => {
+interface TopBarProps {
+    onExportClick?: () => void;
+}
+
+export const TopBar: React.FC<TopBarProps> = ({ onExportClick }) => {
     const { project } = useProjectStore();
     const [isPlaying, setIsPlaying] = useState(false);
 
@@ -31,10 +35,10 @@ export const TopBar: React.FC = () => {
                     <span className="text-sm font-medium">Search</span>
                 </div>
                 
-                 {/* File Actions */}
                 <div className="flex gap-2">
                      <Button size="sm" variant="ghost" onClick={handleSave}>Save</Button>
                      <Button size="sm" variant="ghost" onClick={handleLoad}>Load</Button>
+                     <Button size="sm" variant="primary" onClick={onExportClick} className="bg-accent-primary/10 text-accent-primary hover:bg-accent-primary hover:text-white">Export</Button>
                 </div>
             </div>
 
