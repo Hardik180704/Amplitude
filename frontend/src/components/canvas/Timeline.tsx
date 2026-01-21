@@ -1,13 +1,13 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { ClipRenderer } from '../../canvas/ClipRenderer';
 import { PlayheadRenderer } from '../../canvas/PlayheadRenderer';
 import { CanvasView } from './CanvasView';
 import { useProjectStore } from '../../store';
 import { interactionManager } from '../../interactions/InteractionManager';
+import { HitTest } from '../../canvas/HitTest';
 
 export const Timeline: React.FC = () => {
     const { project } = useProjectStore();
-    // Temporary mocked playhead position, loop it for effect
     const playheadPos = useRef(0);
     
     // Subscribe to Interaction Manager
@@ -22,8 +22,7 @@ export const Timeline: React.FC = () => {
     
     // Theme Colors
     const colors = {
-        bg: '#121214',
-        gridMajor: 'rgba(63, 63, 78, 0.3)', // Translucent
+        gridMajor: 'rgba(63, 63, 78, 0.3)',
         gridMinor: 'rgba(42, 42, 53, 0.2)',
         text: '#52525B'
     };
@@ -34,8 +33,8 @@ export const Timeline: React.FC = () => {
         ctx.fillRect(0, 0, width, height);
         
         // Animate Playhead (Mock)
-        playheadPos.current += dt * (project.tempo / 60); // beats per second * dt
-        if (playheadPos.current * zoom > 2000) playheadPos.current = 0; // Reset loop
+        playheadPos.current += dt * (project.tempo / 60); 
+        if (playheadPos.current * zoom > 2000) playheadPos.current = 0;
 
         const dpr = window.devicePixelRatio || 1;
         
@@ -46,7 +45,6 @@ export const Timeline: React.FC = () => {
         ClipRenderer.renderTracks(ctx, project, width + scrollX, height, scrollX, zoom, viewState.selection);
         
         // 2. Render Grid (Overlay)
-        
         const startPixel = scrollX;
         const endPixel = scrollX + (width / dpr);
         const pixelsPerBeat = zoom;
@@ -56,8 +54,8 @@ export const Timeline: React.FC = () => {
         const endBar = Math.ceil(endPixel / pixelsPerBar);
         
         ctx.lineWidth = 1;
-        ctx.font = '10px JetBrains Mono';
-        ctx.textBaseline = 'top';
+        ctx.font = 'JetBrains Mono'; // Simplified font string
+        // ctx.textBaseline = 'top'; // Default is alphabetic, but top is fine if supported
 
         for (let bar = startBar; bar <= endBar; bar++) {
             const x = bar * pixelsPerBar;
@@ -70,7 +68,7 @@ export const Timeline: React.FC = () => {
             ctx.stroke();
 
             ctx.fillStyle = colors.text;
-            ctx.fillText(`${bar + 1}.1`, x + 4, 2);
+            ctx.fillText(`${bar + 1}.1`, x + 4, 12); // Adjusted y
 
             // Minor
             for (let beat = 1; beat < 4; beat++) {
@@ -90,16 +88,12 @@ export const Timeline: React.FC = () => {
         
         ctx.restore();
 
-    }, [zoom, scrollX, project.tempo]);
+    }, [zoom, scrollX, project.tempo, viewState.selection]);
 
     return (
         <CanvasView 
             onRender={render} 
             className="w-full h-full cursor-crosshair"
-import { HitTest } from '../../canvas/HitTest';
-
-// ... (in Timeline component return) ...
-
             onMouseDown={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const x = e.clientX - rect.left;
@@ -108,7 +102,7 @@ import { HitTest } from '../../canvas/HitTest';
                 const hit = HitTest.getClipAt(project, x, y, scrollX, zoom);
                 if (hit) {
                     interactionManager.selectClip(hit.clip.id, !e.shiftKey);
-                    // TODO: Start Drag
+                    // interactionManager.startDrag(hit.clip.id, e.clientX); // TODO
                 } else {
                     if (!e.shiftKey) interactionManager.clearSelection();
                     interactionManager.handleMouseDown(e.nativeEvent);
