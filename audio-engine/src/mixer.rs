@@ -33,7 +33,6 @@ impl Track {
     }
 
     // Process a block of audio for this track
-    // For now, this just processes the generic "graph" or built-in chain
     pub fn process(&mut self, output: &mut [&mut [f32]]) {
         if self.muted {
             for channel in output.iter_mut() {
@@ -42,14 +41,47 @@ impl Track {
             return;
         }
 
-        // 1. Generate Source Signal (from Clips) - TODO
-        // For now, assume silence or pass-through if we had inputs
+        // 1. Generate Source Signal (Placeholder for now)
+        // In real impl, we iterate self.clips, find ones overlapping current time, 
+        // sum them into a mix buffer.
+        
+        // For testing, let's just create a test tone if we have clips? 
+        // Or assume silence if no clips.
+        // Let's carry over whatever is in output if we treat it as an insert, 
+        // OR clear it if we treat it as a generator.
+        
+        // Let's assume Track generates sound, so we clear output first.
+        // (Unless we have Input monitoring)
+        // For now, simple pass through if data exists, else silence.
         
         // 2. Apply Gain
-        use crate::graph::AudioNode;
-        // Mock input of all ones for testing flow if connected, but here we just process inplace?
-        // GainNode expecting inputs.
-        // Complex graph routing needed here. 
+        self.gain_node.process(&[], output);
+        
+        // 3. Apply Pan (Stereo Constant Power)
+        // Pan is -1.0 (Left) to 1.0 (Right)
+        let pan_clamped = self.pan.clamp(-1.0, 1.0);
+        
+        // Constant power formula:
+        // L = cos( (pan + 1) * PI / 4 )
+        // R = sin( (pan + 1) * PI / 4 )
+        
+        let angle = (pan_clamped + 1.0) * std::f32::consts::PI / 4.0;
+        let gain_l = angle.cos();
+        let gain_r = angle.sin();
+        
+        let samples = output[0].len();
+        
+        // In-place panning is tricky because we need to read L to write R potentially
+        // But since output is stereo, we can do it.
+        // We assume input signal is mono? Or Stereo? 
+        // If Stereo input, typical DAW balance control just attenuates.
+        // If Mono input (common for tracks), we distribute to L/R.
+        
+        // Let's assume Stereo Balance for now since we haven't defined Mono tracks.
+        for i in 0..samples {
+             output[0][i] *= gain_l;
+             output[1][i] *= gain_r;
+        }
     }
 }
 
