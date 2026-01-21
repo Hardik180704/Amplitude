@@ -1,3 +1,4 @@
+pub mod filter;
 use std::f32::consts::PI;
 
 pub const PI_2: f32 = 2.0 * PI;
