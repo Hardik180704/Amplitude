@@ -54,14 +54,17 @@ impl AudioNode for SynthNode {
         // Process internal queue first
         // In a real engine, we'd process events sample-accurately within the loop
         // For Commit 4, we process all at block start (slight jitter)
-        for event in self.event_queue.drain(..) {
+        // Process internal queue first
+        let events: Vec<_> = self.event_queue.drain(..).collect();
+        for event in events {
             self.handle_event(event);
         }
         
         self.allocator.tick(); // Advance age
 
-        let out_l = &mut outputs[0];
-        let out_r = &mut outputs[1];
+        let (left_slice, right_slice) = outputs.split_at_mut(1);
+        let out_l = &mut left_slice[0];
+        let out_r = &mut right_slice[0];
         
         // Clear outputs
         out_l.fill(0.0);

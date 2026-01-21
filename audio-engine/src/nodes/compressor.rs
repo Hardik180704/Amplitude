@@ -51,8 +51,9 @@ impl AudioNode for CompressorNode {
         let in_l = inputs[0];
         let in_r = inputs.get(1).unwrap_or(&inputs[0]);
         
-        let out_l = &mut outputs[0];
-        let out_r = &mut outputs[1];
+        let (l, r) = outputs.split_at_mut(1);
+        let out_l = &mut l[0];
+        let out_r = &mut r[0];
         
         let makeup_linear = db_to_linear(self.makeup_gain_db);
         
