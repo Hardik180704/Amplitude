@@ -5,6 +5,8 @@ pub enum FilterType {
     LowPass,
     HighPass,
     Peaking,
+    LowShelf,
+    HighShelf,
 }
 
 #[derive(Clone, Debug)]
@@ -88,13 +90,47 @@ impl Biquad {
                 self.a2 = a2 * a0_inv;
             },
             FilterType::Peaking => {
-                let a = 10.0f32.powf(self.gain_db / 40.0); // A is sqrt(gain_linear)
+                let a = 10.0f32.powf(self.gain_db / 40.0);
                 let b0 = 1.0 + alpha * a;
                 let b1 = -2.0 * cos_w0;
                 let b2 = 1.0 - alpha * a;
                 let a0 = 1.0 + alpha / a;
                 let a1 = -2.0 * cos_w0;
                 let a2 = 1.0 - alpha / a;
+
+                a0_inv = 1.0 / a0;
+                self.b0 = b0 * a0_inv;
+                self.b1 = b1 * a0_inv;
+                self.b2 = b2 * a0_inv;
+                self.a1 = a1 * a0_inv;
+                self.a2 = a2 * a0_inv;
+            },
+            FilterType::LowShelf => {
+                let a = 10.0f32.powf(self.gain_db / 40.0);
+                let sqrt_a = a.sqrt();
+                let b0 =    a * ((a + 1.0) - (a - 1.0) * cos_w0 + 2.0 * sqrt_a * alpha);
+                let b1 = 2.0 * a * ((a - 1.0) - (a + 1.0) * cos_w0);
+                let b2 =    a * ((a + 1.0) - (a - 1.0) * cos_w0 - 2.0 * sqrt_a * alpha);
+                let a0 =        (a + 1.0) + (a - 1.0) * cos_w0 + 2.0 * sqrt_a * alpha;
+                let a1 =  -2.0 * ((a - 1.0) + (a + 1.0) * cos_w0);
+                let a2 =        (a + 1.0) + (a - 1.0) * cos_w0 - 2.0 * sqrt_a * alpha;
+
+                a0_inv = 1.0 / a0;
+                self.b0 = b0 * a0_inv;
+                self.b1 = b1 * a0_inv;
+                self.b2 = b2 * a0_inv;
+                self.a1 = a1 * a0_inv;
+                self.a2 = a2 * a0_inv;
+            },
+            FilterType::HighShelf => {
+                let a = 10.0f32.powf(self.gain_db / 40.0);
+                let sqrt_a = a.sqrt();
+                let b0 =    a * ((a + 1.0) + (a - 1.0) * cos_w0 + 2.0 * sqrt_a * alpha);
+                let b1 = -2.0 * a * ((a - 1.0) + (a + 1.0) * cos_w0);
+                let b2 =    a * ((a + 1.0) + (a - 1.0) * cos_w0 - 2.0 * sqrt_a * alpha);
+                let a0 =        (a + 1.0) - (a - 1.0) * cos_w0 + 2.0 * sqrt_a * alpha;
+                let a1 =   2.0 * ((a - 1.0) - (a + 1.0) * cos_w0);
+                let a2 =        (a + 1.0) - (a - 1.0) * cos_w0 - 2.0 * sqrt_a * alpha;
 
                 a0_inv = 1.0 / a0;
                 self.b0 = b0 * a0_inv;
