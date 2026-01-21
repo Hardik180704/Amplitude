@@ -65,13 +65,18 @@ export class TransportManager {
         if (!this.isPlaying || this.isTransitioning) return;
         
         console.log("Transport: Pause starting...");
+        
+        // 1. Capture time BEFORE changing any state
+        // The getter relies on isPlaying being true to calculate offset
+        const stopTime = this.currentTime;
+        
         this.isTransitioning = true;
         this.isPlaying = false; // Immediate UI feedback
         this.notify();
 
         try {
             audioEngine.setPlaying(false);
-            this._currentTime = this.currentTime; // Capture exact stop time
+            this._currentTime = stopTime; // Save the captured time
         } finally {
             this.isTransitioning = false;
             this.notify();
@@ -98,14 +103,39 @@ export class TransportManager {
         else await this.play();
     }
     
+    private seekThrottleTimer: any = null;
+    private lastSeekTime: number = 0;
+
     public setTime(seconds: number) {
+        // 1. Immediate UI Sync (Visuals)
         this._currentTime = Math.max(0, seconds);
+        
+        // Optimize: If playing, update context offsets immediately for smoother local clock
         const ctx = audioEngine.getContext();
         if (ctx && this.isPlaying) {
              this.startContextTime = ctx.currentTime;
              this.startTimeOffset = this._currentTime;
         }
+
+        // 2. Throttled Engine Sync (Audio)
+        // Prevent flooding the WASM engine with 60fps seek commands during drag
+        const now = performance.now();
+        if (now - this.lastSeekTime > 30) { // Max 33fps updates to engine
+            this.executeEngineSeek(seconds);
+            this.lastSeekTime = now;
+        } else {
+             if (this.seekThrottleTimer) clearTimeout(this.seekThrottleTimer);
+             this.seekThrottleTimer = setTimeout(() => {
+                 this.executeEngineSeek(seconds);
+                 this.lastSeekTime = performance.now();
+             }, 30);
+        }
+
         this.notify();
+    }
+
+    private executeEngineSeek(seconds: number) {
+        audioEngine.seek(seconds);
     }
 
     // --- Getters ---

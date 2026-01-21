@@ -47,7 +47,7 @@ export const ArrangementView: React.FC = () => {
                         </div>
                     ))}
                     <div className="p-2">
-                        <Button size="sm" onClick={addTrack} variant="secondary" className="w-full text-[10px] uppercase tracking-widest border-dashed opacity-50 hover:opacity-100">
+                        <Button size="sm" onClick={() => addTrack()} variant="secondary" className="w-full text-[10px] uppercase tracking-widest border-dashed opacity-50 hover:opacity-100">
                             + Add Track
                         </Button>
                     </div>

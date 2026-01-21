@@ -178,7 +178,7 @@ export const Timeline: React.FC = () => {
                     interactionManager.startClipDrag(hit.clip.id, e.clientX);
                 } else {
                     // Start Scrubbing
-                    interactionManager.setScrubbing(true);
+                    interactionManager.startScrubbing(rect.left);
                     
                     const pixel = x + scrollX;
                     const beat = pixel / zoom;
@@ -192,7 +192,7 @@ export const Timeline: React.FC = () => {
             }}
             onMouseMove={(e) => interactionManager.handleMouseMove(e.nativeEvent)}
             onMouseUp={(e) => {
-                interactionManager.setScrubbing(false);
+                interactionManager.stopScrubbing();
                 interactionManager.handleMouseUp(e.nativeEvent);
             }}
             onWheel={(e) => interactionManager.handleWheel(e.nativeEvent)}

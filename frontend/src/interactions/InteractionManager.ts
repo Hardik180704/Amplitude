@@ -1,6 +1,5 @@
 import { useProjectStore } from '../store';
 import { transport } from '../audio/TransportManager';
-import { audioEngine } from '../audio/AudioEngine';
 import { WebSocketManager } from '../api/WebSocketManager';
 
 export interface InteractionState {
@@ -26,6 +25,9 @@ export class InteractionManager {
     // Pro Features
     private isScrubbing: boolean = false;
     private followPlayhead: boolean = true;
+    private autoScrollSpeed: number = 0;
+    private autoScrollRafId: number | null = null;
+    private canvasOffsetLeft: number = 0; // Dynamic offset for scrubbing
     
     // Clip Drag State
     private isDraggingClip: boolean = false;
@@ -51,9 +53,15 @@ export class InteractionManager {
         this.notify();
     }
 
-    public setScrubbing(enabled: boolean) {
-        this.isScrubbing = enabled;
-        if (enabled) this.followPlayhead = false; // Manual interaction disables follow
+    public startScrubbing(offsetLeft: number) {
+        this.isScrubbing = true;
+        this.canvasOffsetLeft = offsetLeft;
+        this.followPlayhead = false; // Manual interaction disables follow
+        this.notify();
+    }
+    
+    public stopScrubbing() {
+        this.isScrubbing = false;
         this.notify();
     }
 
@@ -153,16 +161,70 @@ export class InteractionManager {
             this.currentDragOffset += deltaX;
             this.notify();
         } else if (this.isScrubbing) {
-            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            
-            const pixel = x + this.scrollX;
-            const beat = pixel / this.zoom;
-            const time = beat * (60 / transport.tempo);
-            
-            transport.setTime(time);
-            audioEngine.seek(time);
+            // Logic handled in updateScrubPosition to allow sharing with AutoScroll
+            this.updateScrubPosition();
         }
+        
+        // Edge Auto-Scroll Detection (Only if dragging clip or scrubbing)
+        if (this.isDraggingClip || this.isScrubbing) {
+            const width = window.innerWidth;
+            const edgeThreshold = 50;
+            const maxSpeed = 20;
+            
+            if (e.clientX < edgeThreshold) {
+                // Left Edge
+                this.autoScrollSpeed = -maxSpeed * ((edgeThreshold - e.clientX) / edgeThreshold);
+                this.startAutoScroll();
+            } else if (e.clientX > width - edgeThreshold) {
+                // Right Edge
+                this.autoScrollSpeed = maxSpeed * ((e.clientX - (width - edgeThreshold)) / edgeThreshold);
+                this.startAutoScroll();
+            } else {
+                this.stopAutoScroll();
+            }
+        }
+    }
+    
+    private updateScrubPosition() {
+        if (this.isScrubbing) {
+             // Effective X = (MouseClientX - CanvasOffset) + ScrollX
+             const x = Math.max(0, this.lastMouseX - this.canvasOffsetLeft);
+             
+             const pixel = x + this.scrollX;
+             const beat = pixel / this.zoom;
+             const time = beat * (60 / transport.tempo);
+             
+             transport.setTime(time);
+        }
+    }
+
+    private startAutoScroll() {
+        if (this.autoScrollRafId) return;
+        
+        const loop = () => {
+            if (Math.abs(this.autoScrollSpeed) > 0.1) {
+                this.scrollX = Math.max(0, this.scrollX + this.autoScrollSpeed);
+                this.notify();
+                
+                // If scrubbing, existing mouse position now points to NEW time
+                if (this.isScrubbing) {
+                    this.updateScrubPosition();
+                }
+                
+                this.autoScrollRafId = requestAnimationFrame(loop);
+            } else {
+                this.stopAutoScroll();
+            }
+        };
+        this.autoScrollRafId = requestAnimationFrame(loop);
+    }
+    
+    private stopAutoScroll() {
+        if (this.autoScrollRafId) {
+            cancelAnimationFrame(this.autoScrollRafId);
+            this.autoScrollRafId = null;
+        }
+        this.autoScrollSpeed = 0;
     }
 
     public handleMouseUp(_e: MouseEvent) {
@@ -200,6 +262,7 @@ export class InteractionManager {
 
         this.isDragging = false;
         this.isDraggingClip = false;
+        this.stopAutoScroll(); // Stop auto-scroll on release
         this.draggingClipId = null;
         this.currentDragOffset = 0;
         this.notify();
