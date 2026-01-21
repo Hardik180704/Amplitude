@@ -58,18 +58,18 @@ graph TD
     end
 
     subgraph "Shared Memory"
-        RB[Ring Buffer (SPSC)]
-        State[Atomic State View]
+        RB["Ring Buffer (SPSC)"]
+        State["Atomic State View"]
     end
 
     subgraph "AudioWorklet Scope"
-        WASM[WASM Engine]
-        Sched[Sample Scheduler]
-        Mixer[Graph Mixer]
+        WASM["WASM Engine"]
+        Sched["Sample Scheduler"]
+        Mixer["Graph Mixer"]
         
         WASM --> Sched
         Sched --> Mixer
-        Mixer --> DAC[Web Audio Destination]
+        Mixer --> DAC["Web Audio Destination"]
     end
 
     UI -- Write CMD --> RB
