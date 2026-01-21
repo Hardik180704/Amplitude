@@ -17,5 +17,5 @@
   @apply bg-bg-main;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-bg-panel rounded hover:bg-bg-hover;
+  @apply bg-[#222226] rounded hover:bg-accent-primary;
 }

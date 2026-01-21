@@ -7,28 +7,28 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // "Aurora" Dark Theme Palette
+        // "Crimson" Premium Dark Theme Palette
         bg: {
-          main: '#121214',      // Deepest background
-          panel: '#1E1E24',     // Panel background
-          header: '#18181B',    // Top/Bottom bars
-          hover: '#272730',     // Interactive hover
+          main: '#0E0E10',      // Deepest background (Main Canvas)
+          panel: '#151518',     // Panel background (Sidebars)
+          header: '#121214',    // Top/Bottom bars
+          hover: '#222226',     // Interactive hover
         },
         accent: {
-          primary: '#00afdb',   // Electric Blue (Active state)
-          secondary: '#7c3aed', // Purple (Accents)
-          success: '#10b981',   // Green (Meters)
-          warning: '#f59e0b',   // Orange (Clipping)
-          danger: '#ef4444',    // Red (Record)
+          primary: '#FF4D4D',   // Crimson Red (Active/Highlight)
+          secondary: '#FF8E3C', // Solar Orange (Knobs/Meters)
+          success: '#10b981',   // Green
+          warning: '#f59e0b',   // Orange
+          danger: '#FF0000',    // Bright Red (Record)
         },
         text: {
-          primary: '#E4E4E5',
+          primary: '#FFFFFF',
           secondary: '#A1A1AA',
           muted: '#52525B',
         },
         border: {
-          subtle: '#2a2a35',
-          focus: '#3f3f4e',
+          subtle: '#222226',
+          focus: '#FF4D4D',
         }
       },
       fontFamily: {
