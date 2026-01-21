@@ -9,7 +9,9 @@ export const ClipRenderer = {
         scrollX: number, 
         zoom: number,
         selection: number[], // Array of selected IDs
-        trackHeight: number = 96
+        trackHeight: number = 96,
+        draggingClipId?: number,
+        dragOffsetPx?: number
     ) => {
         // Calculate visible range (Unused for now, but ready for logic)
         // const startPixel = scrollX;
@@ -48,7 +50,13 @@ export const ClipRenderer = {
                 const startBeat = clip.start / samplesPerBeat;
                 const durationBeats = clip.duration / samplesPerBeat;
                 
-                const x = (startBeat * zoom) - scrollX;
+                let x = (startBeat * zoom) - scrollX;
+                
+                // Apply visual drag offset
+                if (draggingClipId === clip.id && dragOffsetPx !== undefined) {
+                     x += dragOffsetPx;
+                }
+
                 const w = durationBeats * zoom;
                 
                 // Horizontal Culling
@@ -76,30 +84,51 @@ const renderClipRect = (
     label: string,
     isSelected: boolean = false
 ) => {
-    // 1. Clip Background (Flat Dark)
-    ctx.fillStyle = isSelected ? '#222226' : '#18181B'; 
+    // 1. Clip Background (Glassy Dark)
+    // Create subtle gradient
+    const gradient = ctx.createLinearGradient(x, y, x, y + h);
+    if (isSelected) {
+        gradient.addColorStop(0, '#e11d48'); // Crimson Top
+        gradient.addColorStop(1, '#9f1239'); // Darker Crimson Bottom
+    } else {
+        gradient.addColorStop(0, '#27272a'); // Zinc-800
+        gradient.addColorStop(1, '#18181b'); // Zinc-900
+    }
+    
+    ctx.fillStyle = gradient;
     ctx.fillRect(x, y, w, h);
     
-    // 2. Accent Strip (Top)
-    const stripHeight = 2;
-    ctx.fillStyle = isSelected ? '#FFFFFF' : '#FF4D4D'; // White if selected, Crimson otherwise
-    ctx.fillRect(x, y, w, stripHeight);
+    // 2. Accent Strip (Top) - Only for unselected to give pop, Selected is fully colored
+    if (!isSelected) {
+        ctx.fillStyle = '#e11d48'; // Crimson Strip
+        ctx.fillRect(x, y, w, 2);
+    } // Selected has full glow
 
     // 3. Selection Border (Full)
+    ctx.lineWidth = 1;
     if (isSelected) {
-        ctx.strokeStyle = '#FF4D4D'; // Crimson Border for selection
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#fff'; // White border for contrast
         ctx.strokeRect(x, y, w, h);
+        
+        // Add subtle glow
+        ctx.shadowColor = '#e11d48';
+        ctx.shadowBlur = 15;
+        ctx.strokeRect(x,y,w,h);
+        ctx.shadowBlur = 0;
     } else {
         // Subtle Border for unselected
-        ctx.strokeStyle = '#2a2a35';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#3f3f46'; // Zinc-700
         ctx.strokeRect(x, y, w, h);
     }
     
     // 4. Label
-    ctx.fillStyle = isSelected ? '#FFFFFF' : '#A1A1AA';
-    ctx.font = '500 10px Inter';
+    ctx.fillStyle = isSelected ? '#FFFFFF' : '#a1a1aa';
+    ctx.font = 'bold 10px Inter';
     ctx.textBaseline = 'middle';
-    ctx.fillText(label, x + 6, y + h / 2);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip(); // Clip text
+    ctx.fillText(label.toUpperCase(), x + 6, y + h / 2);
+    ctx.restore();
 }
