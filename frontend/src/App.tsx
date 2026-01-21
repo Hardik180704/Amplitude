@@ -7,6 +7,7 @@ import { MixerChannel } from './components/MixerChannel';
 import { AudioContextManager } from './audio/AudioContextManager';
 import { TopBar } from './components/TopBar';
 import { useProjectStore } from './store';
+import { ExportDialog } from './components/ExportDialog';
 
 function App() {
   const { project, addTrack } = useProjectStore();
@@ -17,6 +18,8 @@ function App() {
        <div style={{ padding: '20px' }}>
           <h2>{project.name}</h2>
           <button onClick={addTrack}>Add Track</button>
+          
+          <ExportDialog />
         <a href="https://vite.dev" target="_blank">
           <img src={viteLogo} className="logo" alt="Vite logo" />
         </a>
