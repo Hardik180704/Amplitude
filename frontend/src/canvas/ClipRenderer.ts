@@ -76,21 +76,30 @@ const renderClipRect = (
     label: string,
     isSelected: boolean = false
 ) => {
-    // Body
-    ctx.fillStyle = isSelected ? '#3f3f4e' : '#272730'; // Highlight if selected
+    // 1. Clip Background (Flat Dark)
+    ctx.fillStyle = isSelected ? '#222226' : '#18181B'; 
     ctx.fillRect(x, y, w, h);
     
-    // Border
-    ctx.strokeStyle = isSelected ? '#ffffff' : '#00afdb'; 
-    ctx.lineWidth = isSelected ? 2 : 1;
-    ctx.strokeRect(x, y, w, h);
+    // 2. Accent Strip (Top)
+    const stripHeight = 2;
+    ctx.fillStyle = isSelected ? '#FFFFFF' : '#FF4D4D'; // White if selected, Crimson otherwise
+    ctx.fillRect(x, y, w, stripHeight);
+
+    // 3. Selection Border (Full)
+    if (isSelected) {
+        ctx.strokeStyle = '#FF4D4D'; // Crimson Border for selection
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, w, h);
+    } else {
+        // Subtle Border for unselected
+        ctx.strokeStyle = '#2a2a35';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, w, h);
+    }
     
-    // Header Bar
-    ctx.fillStyle = 'rgba(0, 175, 219, 0.2)';
-    ctx.fillRect(x, y, w, 16);
-    
-    // Label
-    ctx.fillStyle = '#E4E4E5';
-    ctx.font = '10px Inter';
-    ctx.fillText(label, x + 4, y + 12);
+    // 4. Label
+    ctx.fillStyle = isSelected ? '#FFFFFF' : '#A1A1AA';
+    ctx.font = '500 10px Inter';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, x + 6, y + h / 2);
 }

@@ -3,9 +3,7 @@ import { useProjectStore } from '../store';
 import { AudioContextManager } from '../audio/AudioContextManager';
 import { Button } from './ui/Button';
 
-// Icons (SVG)
-const PlayIcon = () => <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M4 2v12l10-6-10-6z"/></svg>;
-const StopIcon = () => <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M2 2h4v12H2V2zm8 0h4v12h-4V2z"/></svg>;
+// Icons (Inline SVGs used in render)
 
 export const TopBar: React.FC = () => {
     const { project } = useProjectStore();
@@ -66,7 +64,7 @@ export const TopBar: React.FC = () => {
                  
                  {/* Tempo */}
                  <div className="flex flex-col items-center">
-                     <span className="text-xl font-mono font-bold text-text-primary">120</span>
+                     <span className="text-xl font-mono font-bold text-text-primary">{project.tempo}</span>
                      <span className="text-[10px] text-text-secondary uppercase tracking-widest">BPM</span>
                  </div>
             </div>

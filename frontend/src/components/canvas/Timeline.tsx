@@ -20,10 +20,10 @@ export const Timeline: React.FC = () => {
 
     const { zoom, scrollX } = viewState;
     
-    // Theme Colors
+    // Theme Colors (Crimson Palette)
     const colors = {
-        gridMajor: 'rgba(63, 63, 78, 0.3)',
-        gridMinor: 'rgba(42, 42, 53, 0.2)',
+        gridMajor: '#2a2a35', // Subtle Grid
+        gridMinor: '#1a1a20', // Very Subtle
         text: '#52525B'
     };
 
