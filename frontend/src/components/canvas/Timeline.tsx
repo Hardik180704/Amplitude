@@ -1,11 +1,4 @@
-import React, { useCallback, useRef } from 'react';
-import { CanvasView } from './CanvasView';
-import { useProjectStore } from '../../store';
-
-interface TimelineProps {
-    zoom?: number; // Pixels per beat (default 50)
-    scrollX?: number; // Scroll offset in pixels
-}
+import { ClipRenderer } from '../../canvas/ClipRenderer';
 
 export const Timeline: React.FC<TimelineProps> = ({ zoom = 50, scrollX = 0 }) => {
     const { project } = useProjectStore();
@@ -13,23 +6,26 @@ export const Timeline: React.FC<TimelineProps> = ({ zoom = 50, scrollX = 0 }) =>
     // Theme Colors
     const colors = {
         bg: '#121214',
-        gridMajor: '#3f3f4e',
-        gridMinor: '#2a2a35',
+        gridMajor: 'rgba(63, 63, 78, 0.3)', // Translucent
+        gridMinor: 'rgba(42, 42, 53, 0.2)',
         text: '#52525B'
     };
 
     const render = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, _dt: number) => {
         // Clear background
-        ctx.fillStyle = colors.bg;
+        ctx.fillStyle = '#121214';
         ctx.fillRect(0, 0, width, height);
 
         const dpr = window.devicePixelRatio || 1;
-        // Scroll/Zoom Transform handled logically, here we assume ctx is scaled by dpr already
-        // But we need to translate for scroll
+        
         ctx.save();
         ctx.translate(-scrollX, 0);
 
-        // Draw Grid
+        // 1. Render Tracks & Clips (Underlay)
+        // Note: project tracks should be rendered here.
+        ClipRenderer.renderTracks(ctx, project, width + scrollX, height, scrollX, zoom);
+        
+        // 2. Render Grid (Overlay)
         // 1. Calculate visible range
         const startPixel = scrollX;
         const endPixel = scrollX + (width / dpr); // Logical pixels
