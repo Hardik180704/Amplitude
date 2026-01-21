@@ -32,16 +32,22 @@ export const ArrangementView: React.FC = () => {
                 {/* Track Headers */}
                 <div className="w-48 border-r border-border-subtle bg-bg-panel overflow-y-auto">
                     {project.tracks.map(t => (
-                        <div key={t.id} className="h-24 border-b border-border-subtle p-2 bg-bg-panel hover:bg-bg-hover transition-colors group">
-                            <div className="text-sm font-semibold text-text-primary mb-1">{t.name}</div>
-                            <div className="flex gap-1">
-                                <span className={`text-[10px] px-1 rounded border border-border-subtle cursor-pointer ${t.muted ? 'bg-accent-warning text-black' : 'text-text-muted'}`}>M</span>
-                                <span className={`text-[10px] px-1 rounded border border-border-subtle cursor-pointer ${t.soloed ? 'bg-accent-secondary text-white' : 'text-text-muted'}`}>S</span>
+                        <div key={t.id} className="h-24 border-b border-border-subtle p-2 bg-bg-panel group relative hover:bg-bg-hover transition-colors">
+                            {/* Track Color Strip */}
+                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${t.muted ? 'bg-text-muted' : 'bg-accent-primary'}`} />
+                            
+                            <div className="ml-2 flex flex-col h-full justify-between">
+                                <div className="text-xs font-bold text-text-primary uppercase tracking-wide truncate">{t.name}</div>
+                                
+                                <div className="flex gap-2 mb-1">
+                                    <button className={`w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold border transition-colors ${t.muted ? 'bg-accent-warning text-black border-accent-warning' : 'bg-bg-main border-border-subtle text-text-muted hover:border-text-muted'}`}>M</button>
+                                    <button className={`w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold border transition-colors ${t.soloed ? 'bg-accent-secondary text-white border-accent-secondary' : 'bg-bg-main border-border-subtle text-text-muted hover:border-text-muted'}`}>S</button>
+                                </div>
                             </div>
                         </div>
                     ))}
                     <div className="p-2">
-                        <Button size="sm" onClick={addTrack} variant="secondary" className="w-full text-xs">
+                        <Button size="sm" onClick={addTrack} variant="secondary" className="w-full text-[10px] uppercase tracking-widest border-dashed opacity-50 hover:opacity-100">
                             + Add Track
                         </Button>
                     </div>
@@ -49,7 +55,7 @@ export const ArrangementView: React.FC = () => {
                 
                 {/* Timeline Grid */}
                 <div className="flex-1 bg-bg-main relative overflow-hidden">
-                    <Timeline zoom={100} scrollX={0} />
+                    <Timeline />
                     
                     {/* Mock Piano Roll integrated (Floating for now) */}
                     <div className="absolute top-10 left-10 p-2 shadow-xl opacity-80 pointer-events-none">
