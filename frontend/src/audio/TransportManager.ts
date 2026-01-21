@@ -1,54 +1,111 @@
+import { audioEngine } from './AudioEngine';
 
 export class TransportManager {
-    public currentTime: number = 0; // In Seconds
+    private _currentTime: number = 0; // Stopped/Paused time in seconds
     public tempo: number = 120;
     public isPlaying: boolean = false;
 
-    private lastFrameTime: number = 0;
-    private rafId: number | null = null;
-    private listeners: Set<() => void> = new Set(); // For state changes (Play/Stop), not time!
+    private startContextTime: number = 0;
+    private startTimeOffset: number = 0;
+    private listeners: Set<() => void> = new Set(); 
 
     constructor() {}
+
+    private isTransitioning: boolean = false;
+
+    public get currentTime(): number {
+        if (!this.isPlaying) return this._currentTime;
+        const ctx = audioEngine.getContext();
+        if (ctx) {
+            return Math.max(0, this.startTimeOffset + (ctx.currentTime - this.startContextTime));
+        }
+        return this._currentTime;
+    }
 
     public setTempo(bpm: number) {
         this.tempo = bpm;
     }
 
-    public play() {
-        if (this.isPlaying) return;
-        this.isPlaying = true;
-        this.lastFrameTime = performance.now();
-        this.tick();
-        this.notify();
-    }
-
-    public pause() {
-        this.isPlaying = false;
-        if (this.rafId) cancelAnimationFrame(this.rafId);
-        this.notify();
-    }
-
-    public stop() {
-        this.pause();
-        this.currentTime = 0;
-        this.notify();
-    }
-
-    public toggle() {
-        if (this.isPlaying) this.pause();
-        else this.play();
-    }
-
-    private tick = () => {
-        if (!this.isPlaying) return;
+    public async play() {
+        if (this.isPlaying || this.isTransitioning) return;
         
-        const now = performance.now();
-        const dt = (now - this.lastFrameTime) / 1000;
-        this.lastFrameTime = now;
+        console.log("Transport: Play starting...");
+        this.isTransitioning = true;
+        this.isPlaying = true; // Immediate UI feedback
+        this.notify();
 
-        this.currentTime += dt;
+        try {
+            // Ensure engine is ready (lazy init if needed)
+            if (!audioEngine.getInitialized()) {
+                await audioEngine.init();
+            }
+            
+            await audioEngine.resume();
+            
+            const ctx = audioEngine.getContext();
+            if (ctx) {
+                this.startContextTime = ctx.currentTime;
+                this.startTimeOffset = this._currentTime;
+                
+                audioEngine.seek(this._currentTime);
+                audioEngine.setPlaying(true);
+                
+                console.log("Transport: Engine Sync Complete at", this._currentTime);
+            }
+        } catch (e) {
+            console.error("Transport: Play failed", e);
+            this.isPlaying = false;
+        } finally {
+            this.isTransitioning = false;
+            this.notify();
+        }
+    }
 
-        this.rafId = requestAnimationFrame(this.tick);
+    public async pause() {
+        if (!this.isPlaying || this.isTransitioning) return;
+        
+        console.log("Transport: Pause starting...");
+        this.isTransitioning = true;
+        this.isPlaying = false; // Immediate UI feedback
+        this.notify();
+
+        try {
+            audioEngine.setPlaying(false);
+            this._currentTime = this.currentTime; // Capture exact stop time
+        } finally {
+            this.isTransitioning = false;
+            this.notify();
+        }
+    }
+
+    public async stop() {
+        if (this.isTransitioning) return;
+        
+        this.isTransitioning = true;
+        try {
+            audioEngine.setPlaying(false);
+            this.isPlaying = false;
+            this._currentTime = 0;
+            audioEngine.seek(0);
+        } finally {
+            this.isTransitioning = false;
+            this.notify();
+        }
+    }
+
+    public async toggle() {
+        if (this.isPlaying) await this.pause();
+        else await this.play();
+    }
+    
+    public setTime(seconds: number) {
+        this._currentTime = Math.max(0, seconds);
+        const ctx = audioEngine.getContext();
+        if (ctx && this.isPlaying) {
+             this.startContextTime = ctx.currentTime;
+             this.startTimeOffset = this._currentTime;
+        }
+        this.notify();
     }
 
     // --- Getters ---
