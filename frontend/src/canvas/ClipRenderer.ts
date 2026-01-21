@@ -1,4 +1,5 @@
 import type { Project } from '../store';
+import { audioEngine } from '../audio/AudioEngine';
 
 export const ClipRenderer = {
     renderTracks: (
@@ -46,7 +47,8 @@ export const ClipRenderer = {
                 // Let's rely on unit-less "position" if possible or mock it.
                 // Since our store `ClipData` has `start` in Samples (u64).
                 
-                const samplesPerBeat = (44100 * 60) / project.tempo;
+                const sampleRate = audioEngine.getContext()?.sampleRate || 44100;
+                const samplesPerBeat = (sampleRate * 60) / project.tempo;
                 const startBeat = clip.start / samplesPerBeat;
                 const durationBeats = clip.duration / samplesPerBeat;
                 
@@ -65,7 +67,7 @@ export const ClipRenderer = {
                 const isSelected = selection.includes(clip.id);
                 
                 // Draw Clip Rect
-                renderClipRect(ctx, x, trackTop + 2, w, trackHeight - 4, clip.name, isSelected);
+                renderClipRect(ctx, x, trackTop + 2, w, trackHeight - 4, clip.name, isSelected, clip.type === 'audio' ? clip.asset_id : undefined);
             });
             
             // Draw Separator
@@ -75,6 +77,51 @@ export const ClipRenderer = {
     }
 };
 
+// Helper to draw waveform
+const renderWaveform = (
+    ctx: CanvasRenderingContext2D,
+    buffer: AudioBuffer,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    color: string
+) => {
+    const data = buffer.getChannelData(0); // Use Left channel for mono view
+    const step = Math.ceil(data.length / w);
+    const amp = h / 2;
+
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+
+    // Fixed boost for visibility (typical in DAWs for non-destructive visual)
+    const boost = 1.5;
+
+    for (let i = 0; i < w; i++) {
+        let min = 1.0;
+        let max = -1.0;
+        
+        // Downsample
+        let startIndex = i * step;
+        if (startIndex >= data.length) break;
+        
+        for (let j = 0; j < step; j++) {
+            const datum = data[startIndex + j];
+            if (datum < min) min = datum;
+            if (datum > max) max = datum;
+        }
+        
+        // Draw vertical line from min to max with boost
+        const vMin = Math.max(-1, min * boost);
+        const vMax = Math.min(1, max * boost);
+        
+        ctx.moveTo(x + i, y + amp + (vMin * amp));
+        ctx.lineTo(x + i, y + amp + (vMax * amp));
+    }
+    ctx.stroke();
+}
+
 const renderClipRect = (
     ctx: CanvasRenderingContext2D, 
     x: number, 
@@ -82,7 +129,8 @@ const renderClipRect = (
     w: number, 
     h: number, 
     label: string,
-    isSelected: boolean = false
+    isSelected: boolean = false,
+    assetId?: string
 ) => {
     // 1. Clip Background (Glassy Dark)
     // Create subtle gradient
@@ -97,6 +145,19 @@ const renderClipRect = (
     
     ctx.fillStyle = gradient;
     ctx.fillRect(x, y, w, h);
+    
+    // WAVEFORM RENDERING
+    if (assetId) {
+        const buffer = audioEngine.getAudioBuffer(assetId);
+        if (buffer) {
+             const waveColor = isSelected ? 'rgba(255,255,255,0.9)' : 'rgba(255, 255, 255, 0.4)'; 
+             renderWaveform(ctx, buffer, x, y, w, h, waveColor);
+        } else {
+             ctx.fillStyle = '#ef4444'; // Red-500
+             ctx.font = 'bold 9px monospace';
+             ctx.fillText('• LOADING AUDIO...', x + 6, y + h - 10);
+        }
+    }
     
     // 2. Accent Strip (Top) - Only for unselected to give pop, Selected is fully colored
     if (!isSelected) {
@@ -129,6 +190,8 @@ const renderClipRect = (
     ctx.beginPath();
     ctx.rect(x, y, w, h);
     ctx.clip(); // Clip text
+    ctx.shadowColor = 'black';
+    ctx.shadowBlur = 4;
     ctx.fillText(label.toUpperCase(), x + 6, y + h / 2);
     ctx.restore();
 }
