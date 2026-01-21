@@ -1,7 +1,12 @@
+import { WebSocketManager } from '../api/WebSocketManager';
+import { useProjectStore } from '../store';
+
 export interface InteractionState {
     zoom: number;
     scrollX: number;
-    selection: number[]; // Array of selected clip IDs
+    selection: number[];
+    draggingClipId?: number;
+    dragOffset?: number; // In beats? or Pixels? Let's use pixels for renderer, convert to time for commit.
 }
 
 export type InteractionCallback = (state: InteractionState) => void;
@@ -10,10 +15,16 @@ export class InteractionManager {
     private zoom: number = 50; // Pixels per beat
     private scrollX: number = 0;
     private selection: Set<number> = new Set();
+    
     private isDragging: boolean = false;
-    private isDraggingClip: boolean = false;
-    private dragStartMs: number = 0; // or pixel
     private lastMouseX: number = 0;
+    
+    // Clip Drag State
+    private isDraggingClip: boolean = false;
+    private draggingClipId: number | null = null;
+    private dragStartX: number = 0;
+    private currentDragOffset: number = 0;
+
     private onChangeCallbacks: Set<InteractionCallback> = new Set();
 
     constructor() {}
@@ -26,9 +37,13 @@ export class InteractionManager {
         this.notify();
     }
     
-    public startClipDrag(_clipId: number, startX: number) {
+    public startClipDrag(clipId: number, startX: number) {
         this.isDraggingClip = true;
+        this.draggingClipId = clipId;
+        this.dragStartX = startX;
         this.lastMouseX = startX;
+        this.currentDragOffset = 0;
+        this.notify();
     }
 
     public clearSelection() {
@@ -40,7 +55,9 @@ export class InteractionManager {
         return {
             zoom: this.zoom,
             scrollX: this.scrollX,
-            selection: Array.from(this.selection)
+            selection: Array.from(this.selection),
+            draggingClipId: this.draggingClipId || undefined,
+            dragOffset: this.currentDragOffset
         };
     }
 
@@ -63,9 +80,6 @@ export class InteractionManager {
         if (e.ctrlKey || e.metaKey) {
             const zoomDelta = -e.deltaY * 0.1;
             const newZoom = Math.max(10, Math.min(500, this.zoom + zoomDelta));
-            
-            // Zoom towards mouse pointer logic (simplified for now: center or left)
-            // Ideally: preserve time at mouseX
             this.zoom = newZoom;
         } 
         // Scroll: Horizontal or Shift + Wheel or just Wheel
@@ -90,17 +104,50 @@ export class InteractionManager {
         if (this.isDragging) {
             this.scrollX = Math.max(0, this.scrollX - deltaX);
             this.notify();
-        } else if (this.isDraggingClip) {
-            // Calculate time delta based on zoom
-            // const timeDelta = deltaX / this.zoom;
-            // Notify Store to update clip start (Need callback or Store link)
-            // For now, simple console log or mock
+        } else if (this.isDraggingClip && this.draggingClipId !== null) {
+            this.currentDragOffset += deltaX;
+            this.notify();
         }
     }
 
     public handleMouseUp(_e: MouseEvent) {
+        if (this.isDraggingClip && this.draggingClipId !== null) {
+            // Commit drag
+            const store = useProjectStore.getState();
+            // Find clip to get original start? 
+            // We need a helper to find clip by ID.
+            let clip = null;
+            let trackId = -1;
+            for (const t of store.project.tracks) {
+                const c = t.clips.find(c => c.id === this.draggingClipId);
+                if (c) {
+                    clip = c;
+                    trackId = t.id;
+                    break;
+                }
+            }
+
+            if (clip && trackId !== -1) {
+                const deltaBeats = this.currentDragOffset / this.zoom;
+                const newStart = Math.max(0, clip.start + deltaBeats);
+                
+                // Optimistic Update
+                store.moveClip(clip.id, newStart, trackId);
+                
+                // Network update
+                WebSocketManager.getInstance().send('MoveClip', { 
+                    clip_id: clip.id, 
+                    new_start: newStart, 
+                    track_id: trackId 
+                });
+            }
+        }
+
         this.isDragging = false;
         this.isDraggingClip = false;
+        this.draggingClipId = null;
+        this.currentDragOffset = 0;
+        this.notify();
     }
 }
 
