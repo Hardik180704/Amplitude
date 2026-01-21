@@ -11,3 +11,5 @@ pub use eq::EqNode;
 pub use delay::DelayNode;
 pub use compressor::CompressorNode;
 pub use synth::SynthNode;
+pub mod filter;
+pub use filter::FilterNode;
