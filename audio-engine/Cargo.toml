@@ -12,3 +12,4 @@ js-sys = "0.3"
 web-sys = { version = "0.3", features = ["AudioContext", "AudioWorkletProcessor", "MessagePort", "MessageEvent", "console"] }
 serde = { version = "1.0", features = ["derive"] }
 shared = { path = "../shared" }
+console_error_panic_hook = "0.1"
