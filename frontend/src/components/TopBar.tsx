@@ -35,10 +35,8 @@ export const TopBar: React.FC = () => {
                 setStatus(`Loaded ${data.name}`);
                 
                 // Hydrate Engine
-                AudioContextManager.getInstance().sendCommand({
-                    type: "LoadProject",
-                    project: data
-                });
+                // Fix: sendCommand expects (type, payload)
+                AudioContextManager.getInstance().sendCommand("LoadProject", { project: data });
             } else {
                 setStatus('Project not found');
             }

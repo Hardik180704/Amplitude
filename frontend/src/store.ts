@@ -27,11 +27,7 @@ interface ProjectState {
 }
 
 export const useProjectStore = create<ProjectState>((set) => ({
-    project: {
-        name: "Untitled Project",
-        tempo: 120,
-        tracks: []
-    },
+    project: initialProject,
     setProject: (project) => set({ project }),
     
     updateTrack: (id, updates) => set((state) => ({
