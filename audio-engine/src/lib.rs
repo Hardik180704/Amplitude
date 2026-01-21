@@ -7,6 +7,7 @@ pub mod mixer;
 pub mod scheduler;
 pub mod analysis;
 pub mod dsp;
+pub mod midi;
 pub use processor::WasmAudioProcessor;
 
 #[wasm_bindgen]
