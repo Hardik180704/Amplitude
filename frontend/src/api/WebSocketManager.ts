@@ -1,4 +1,5 @@
 import { useProjectStore } from '../store';
+import { AudioContextManager } from '../audio/AudioContextManager';
 
 type WebSocketMessage = 
     | { type: 'StateUpdate', payload: any }
@@ -64,10 +65,6 @@ export class WebSocketManager {
         }
         this.ws.send(JSON.stringify({ type: action, payload }));
     }
-
-import { AudioContextManager } from '../audio/AudioContextManager';
-
-// ... 
 
     private handleMessage(msg: WebSocketMessage) {
         switch (msg.type) {
