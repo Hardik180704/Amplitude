@@ -8,6 +8,30 @@ pub struct Project {
     pub tracks: Vec<TrackData>,
 }
 
+impl Project {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            tempo: 120.0,
+            tracks: Vec::new(),
+        }
+    }
+
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(self)
+    }
+
+    pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(json)
+    }
+}
+
+impl Default for Project {
+    fn default() -> Self {
+        Self::new("New Project")
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TrackData {
     pub id: u32,
