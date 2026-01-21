@@ -4,11 +4,17 @@ import { Panel } from './components/ui/Panel';
 import { MixerPanel } from './components/MixerPanel';
 import { ArrangementView } from './components/ArrangementView';
 import { ExportModal } from './components/modals/ExportModal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { WebSocketManager } from './api/WebSocketManager';
 import './App.css';
 
 function App() {
     const [isExportOpen, setIsExportOpen] = useState(false);
+
+    useEffect(() => {
+        // Initialize WebSocket Connection
+        WebSocketManager.getInstance().connect();
+    }, []);
 
     return (
         <>
