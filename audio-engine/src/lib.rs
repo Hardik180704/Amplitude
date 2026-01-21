@@ -3,6 +3,7 @@ use wasm_bindgen::prelude::*;
 mod processor;
 pub mod graph;
 pub mod nodes;
+pub mod mixer;
 pub use processor::WasmAudioProcessor;
 
 #[wasm_bindgen]
