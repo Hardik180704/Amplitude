@@ -1,7 +1,11 @@
-import { ClipRenderer } from '../../canvas/ClipRenderer';
+import { PlayheadRenderer } from '../../canvas/PlayheadRenderer';
 
 export const Timeline: React.FC<TimelineProps> = ({ zoom = 50, scrollX = 0 }) => {
     const { project } = useProjectStore();
+    // Temporary mocked playhead position, loop it for effect
+    const playheadPos = useRef(0);
+    
+    // ... theme colors ...
     
     // Theme Colors
     const colors = {
@@ -11,10 +15,14 @@ export const Timeline: React.FC<TimelineProps> = ({ zoom = 50, scrollX = 0 }) =>
         text: '#52525B'
     };
 
-    const render = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, _dt: number) => {
+    const render = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, dt: number) => {
         // Clear background
         ctx.fillStyle = '#121214';
         ctx.fillRect(0, 0, width, height);
+        
+        // Animate Playhead (Mock)
+        playheadPos.current += dt * (project.tempo / 60); // beats per second * dt
+        if (playheadPos.current * zoom > 2000) playheadPos.current = 0; // Reset loop
 
         const dpr = window.devicePixelRatio || 1;
         
@@ -22,16 +30,17 @@ export const Timeline: React.FC<TimelineProps> = ({ zoom = 50, scrollX = 0 }) =>
         ctx.translate(-scrollX, 0);
 
         // 1. Render Tracks & Clips (Underlay)
-        // Note: project tracks should be rendered here.
         ClipRenderer.renderTracks(ctx, project, width + scrollX, height, scrollX, zoom);
         
         // 2. Render Grid (Overlay)
-        // 1. Calculate visible range
-        const startPixel = scrollX;
-        const endPixel = scrollX + (width / dpr); // Logical pixels
+        const colors = {
+            gridMajor: 'rgba(63, 63, 78, 0.3)',
+            gridMinor: 'rgba(42, 42, 53, 0.2)',
+            text: '#52525B'
+        };
         
-        // 2. Iterate beats
-        // Bar = 4 beats (4/4 time)
+        const startPixel = scrollX;
+        const endPixel = scrollX + (width / dpr);
         const pixelsPerBeat = zoom;
         const pixelsPerBar = pixelsPerBeat * 4;
         
@@ -45,18 +54,17 @@ export const Timeline: React.FC<TimelineProps> = ({ zoom = 50, scrollX = 0 }) =>
         for (let bar = startBar; bar <= endBar; bar++) {
             const x = bar * pixelsPerBar;
             
-            // Draw Bar Line (Major)
+            // Major
             ctx.beginPath();
             ctx.strokeStyle = colors.gridMajor;
             ctx.moveTo(x, 0);
             ctx.lineTo(x, height);
             ctx.stroke();
 
-            // Draw Bar Label (1.1, 2.1, etc)
             ctx.fillStyle = colors.text;
             ctx.fillText(`${bar + 1}.1`, x + 4, 2);
 
-            // Draw Beats (Minor)
+            // Minor
             for (let beat = 1; beat < 4; beat++) {
                 const bx = x + (beat * pixelsPerBeat);
                 if (bx > endPixel) break;
@@ -68,6 +76,9 @@ export const Timeline: React.FC<TimelineProps> = ({ zoom = 50, scrollX = 0 }) =>
                 ctx.stroke();
             }
         }
+        
+        // 3. Render Playhead
+        PlayheadRenderer.render(ctx, width + scrollX, height, scrollX, zoom, playheadPos.current);
         
         ctx.restore();
 
