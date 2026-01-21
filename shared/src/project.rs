@@ -68,7 +68,6 @@ pub struct MidiNoteData {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(tag = "type", content = "payload")]
 pub enum Effect {
     Eq {
