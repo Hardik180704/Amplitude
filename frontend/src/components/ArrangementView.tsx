@@ -57,12 +57,7 @@ export const ArrangementView: React.FC = () => {
                 <div className="flex-1 bg-bg-main relative overflow-hidden">
                     <Timeline />
                     
-                    {/* Mock Piano Roll integrated (Floating for now) */}
-                    <div className="absolute top-10 left-10 p-2 shadow-xl opacity-80 pointer-events-none">
-                         <div className="bg-bg-panel/50 p-2 rounded border border-border-subtle text-xs text-text-secondary">
-                            Clip Overlay (Placeholder)
-                         </div>
-                    </div>
+
                 </div>
           </div>
       </div>

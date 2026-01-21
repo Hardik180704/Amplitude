@@ -1,25 +1,37 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { ClipRenderer } from '../../canvas/ClipRenderer';
 import { CanvasView } from './CanvasView';
 import { useProjectStore } from '../../store';
 import { interactionManager } from '../../interactions/InteractionManager';
 import { HitTest } from '../../canvas/HitTest';
+import { audioEngine } from '../../audio/AudioEngine';
 import { transport } from '../../audio/TransportManager';
 
 export const Timeline: React.FC = () => {
-    const { project } = useProjectStore();
-    // Removed local playheadPos ref as we use transport now
+    // Refs for heavy state to avoid re-renders of the Canvas loop
+    const projectRef = useRef(useProjectStore.getState().project);
+    const viewStateRef = useRef(interactionManager.getState());
     
-    // Subscribe to Interaction Manager
-    const [viewState, setViewState] = useState(interactionManager.getState());
-
+    // We still need some re-renders for React logic if needed, but for Canvas we use Refs.
+    // Actually, we can just subscribe.
+    
     useEffect(() => {
-        const unsubscribe = interactionManager.subscribe(setViewState);
-        return () => { unsubscribe(); };
+        // Subscribe to Project changes
+        const unsubProject = useProjectStore.subscribe((state) => {
+            projectRef.current = state.project;
+        });
+        
+        // Subscribe to Interaction changes
+        const unsubInteraction = interactionManager.subscribe((state) => {
+            viewStateRef.current = state;
+        });
+        
+        return () => {
+             unsubProject();
+             unsubInteraction();
+        };
     }, []);
 
-    const { zoom, scrollX } = viewState;
-    
     // Theme Colors (Crimson Palette)
     const colors = {
         bg: '#09090b',        // Main Canvas Background
@@ -29,24 +41,44 @@ export const Timeline: React.FC = () => {
         textHighlight: '#a1a1aa'
     };
 
-    const render = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, dt: number) => {
+    const render = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, _dt: number) => {
+        const project = projectRef.current;
+        const viewState = viewStateRef.current;
+        const { zoom, scrollX, selection, draggingClipId, dragOffset, followPlayhead } = viewState;
+        
         // Clear background
         ctx.fillStyle = colors.bg;
         ctx.fillRect(0, 0, width, height);
+
+        const dpr = window.devicePixelRatio || 1;
+        const visibleWidth = width / dpr;
         
         // Sync Playhead
         const currentBeat = transport.currentBeat;
-        // Loop for demo
-        if (currentBeat * zoom > 2000) transport.stop(); // Or loop logic
+        const playheadPx = currentBeat * zoom;
 
-        const dpr = window.devicePixelRatio || 1;
-        
+        // LOCAL scrollX so we can update it and use it in the same frame
+        let activeScrollX = scrollX;
+
+        // --- Premium Auto-Scroll Logic (Continuous) ---
+        if (followPlayhead && transport.isPlaying) {
+             const playheadAt = 0.2; // Keep playhead at 20% of screen
+             const targetScrollX = playheadPx - (visibleWidth * playheadAt);
+             
+             if (targetScrollX > 0) {
+                 // Update the manager for permanent state
+                 interactionManager.setScrollX(targetScrollX);
+                 // Use it immediately for this draw call to avoid 1-frame lag
+                 activeScrollX = targetScrollX;
+             }
+        }
+
         ctx.save();
-        ctx.translate(-scrollX, 0);
+        ctx.translate(-activeScrollX, 0);
 
         // 1. Render Grid (Underlay for Tracks)
-        const startPixel = scrollX;
-        const endPixel = scrollX + (width / dpr);
+        const startPixel = activeScrollX;
+        const endPixel = activeScrollX + visibleWidth;
         const pixelsPerBeat = zoom;
         const pixelsPerBar = pixelsPerBeat * 4;
         
@@ -89,19 +121,19 @@ export const Timeline: React.FC = () => {
         ClipRenderer.renderTracks(
             ctx, 
             project, 
-            width + scrollX, 
+            width + activeScrollX, 
             height, 
-            scrollX, 
+            activeScrollX, 
             zoom, 
-            viewState.selection, 
+            selection, 
             96, // track height
-            viewState.draggingClipId,
-            viewState.dragOffset
+            draggingClipId,
+            dragOffset
         );
         
         // 3. Render Playhead (Overlay)
         // Draw Red Line
-        const px = (transport.currentBeat * zoom);
+        const px = playheadPx;
         ctx.beginPath();
         ctx.strokeStyle = '#e11d48'; // accent-primary
         ctx.lineWidth = 1; // hairline
@@ -125,28 +157,44 @@ export const Timeline: React.FC = () => {
 
         ctx.restore();
 
-    }, [zoom, scrollX, project, viewState.selection]);
+    }, []); // Explicitly empty deps. Relies on refs.
 
     return (
         <CanvasView 
             onRender={render} 
             className="w-full h-full cursor-crosshair"
             onMouseDown={(e) => {
+                const project = projectRef.current;
+                const viewState = viewStateRef.current;
+                const { zoom, scrollX } = viewState;
+                
                 const rect = e.currentTarget.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
                 
                 const hit = HitTest.getClipAt(project, x, y, scrollX, zoom);
-                if (hit) {
+                if (hit && !e.shiftKey && !e.metaKey) {
                     interactionManager.selectClip(hit.clip.id, !e.shiftKey);
                     interactionManager.startClipDrag(hit.clip.id, e.clientX);
                 } else {
+                    // Start Scrubbing
+                    interactionManager.setScrubbing(true);
+                    
+                    const pixel = x + scrollX;
+                    const beat = pixel / zoom;
+                    const time = beat * (60 / transport.tempo);
+                    
+                    transport.setTime(time);
+                    audioEngine.seek(time);
+                    
                     if (!e.shiftKey) interactionManager.clearSelection();
-                    interactionManager.handleMouseDown(e.nativeEvent);
                 }
             }}
             onMouseMove={(e) => interactionManager.handleMouseMove(e.nativeEvent)}
-            onMouseUp={(e) => interactionManager.handleMouseUp(e.nativeEvent)}
+            onMouseUp={(e) => {
+                interactionManager.setScrubbing(false);
+                interactionManager.handleMouseUp(e.nativeEvent);
+            }}
             onWheel={(e) => interactionManager.handleWheel(e.nativeEvent)}
         />
     );
