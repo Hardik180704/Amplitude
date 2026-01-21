@@ -1,0 +1,69 @@
+import React from 'react';
+import { PianoRoll } from './PianoRoll';
+import { Panel } from './ui/Panel';
+import { Button } from './ui/Button';
+import { useProjectStore } from '../store';
+
+export const ArrangementView: React.FC = () => {
+    const { project, addTrack } = useProjectStore();
+    
+    return (
+      <div className="relative w-full h-full bg-bg-main flex flex-col">
+          {/* Timeline Header */}
+          <div className="h-8 border-b border-border-subtle bg-bg-header flex overflow-hidden">
+               {/* Tracks Header Column */}
+               <div className="w-48 border-r border-border-subtle bg-bg-panel flex items-center px-4">
+                   <span className="text-xs font-bold text-text-secondary uppercase">Tracks</span>
+               </div>
+               {/* Timeline Ruler */}
+               <div className="flex-1 relative bg-bg-header">
+                   {/* Mock Ruler */}
+                   <div className="absolute top-0 bottom-0 left-0 w-[2000px] flex items-end pb-1 pl-2 text-[10px] text-text-muted font-mono pointer-events-none">
+                       <span>1.1</span>
+                       <span className="ml-[100px]">1.2</span>
+                       <span className="ml-[100px]">1.3</span>
+                       <span className="ml-[100px]">1.4</span>
+                       <span className="ml-[100px]">2.1</span>
+                       <span className="ml-[100px]">2.2</span>
+                   </div>
+               </div>
+          </div>
+          
+          <div className="flex-1 flex overflow-hidden">
+                {/* Track Headers */}
+                <div className="w-48 border-r border-border-subtle bg-bg-panel overflow-y-auto">
+                    {project.tracks.map(t => (
+                        <div key={t.id} className="h-24 border-b border-border-subtle p-2 bg-bg-panel hover:bg-bg-hover transition-colors group">
+                            <div className="text-sm font-semibold text-text-primary mb-1">{t.name}</div>
+                            <div className="flex gap-1">
+                                <span className={`text-[10px] px-1 rounded border border-border-subtle cursor-pointer ${t.muted ? 'bg-accent-warning text-black' : 'text-text-muted'}`}>M</span>
+                                <span className={`text-[10px] px-1 rounded border border-border-subtle cursor-pointer ${t.soloed ? 'bg-accent-secondary text-white' : 'text-text-muted'}`}>S</span>
+                            </div>
+                        </div>
+                    ))}
+                    <div className="p-2">
+                        <Button size="sm" onClick={addTrack} variant="secondary" className="w-full text-xs">
+                            + Add Track
+                        </Button>
+                    </div>
+                </div>
+                
+                {/* Timeline Grid */}
+                <div className="flex-1 bg-bg-main relative overflow-auto">
+                    {/* Mock Grid Background */}
+                    <div className="absolute inset-0 w-[2000px] h-[1000px]" style={{
+                        backgroundImage: 'linear-gradient(to right, #2a2a35 1px, transparent 1px)',
+                        backgroundSize: '100px 100%'
+                    }}></div>
+                    
+                    {/* Mock Piano Roll integrated */}
+                    <div className="absolute top-2 left-2 p-2">
+                         <Panel title="Active Clip: Synth Melody">
+                             <PianoRoll notes={[]} width={600} height={150} />
+                         </Panel>
+                    </div>
+                </div>
+          </div>
+      </div>
+    );
+};
