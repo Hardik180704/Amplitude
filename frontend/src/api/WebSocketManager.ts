@@ -1,5 +1,5 @@
-import { useProjectStore } from '../store';
 import { AudioContextManager } from '../audio/AudioContextManager';
+import { useProjectStore } from '../store';
 
 type WebSocketMessage = 
     | { type: 'StateUpdate', payload: any }
@@ -67,40 +67,81 @@ export class WebSocketManager {
     }
 
     private handleMessage(msg: WebSocketMessage) {
-        switch (msg.type) {
-            case 'StateUpdate':
-                // Parse the internal payload string (if it's double-serialized)
-                try {
-                     // If payload is a string (Wait, backend sends "Echo: JSONString")
-                     // We need to match the backend protocol carefully.
-                     // Current Backend: "{\"type\": \"StateUpdate\", \"payload\": \"Echo: " + text + "\"}"
-                     // Actually, my backend code sends: text directly if it's an action broadcast.
-                     
-                     // Let's assume the backend broadcasts the raw Action JSON back.
-                     // The "Echo" logic in my previous backend step was:
-                     // let _ = tx.send(text); -> This sends the raw JSON string of the Action.
-                     
-                     const action = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;
-                     console.log('WS Action:', action);
+        if (msg.type === 'Error') {
+            console.error('Backend Error:', msg.message);
+            return;
+        }
 
-                     if (action.type === 'Play') {
-                         AudioContextManager.getInstance().sendCommand('Play', {});
-                     } else if (action.type === 'Stop') {
-                         AudioContextManager.getInstance().sendCommand('Stop', {});
-                     }
-                     // TODO: Handle UpdateTrack, AddClip etc.
-                } catch(e) {
-                    console.error('Error handling WS action', e);
+        if (msg.type === 'Init') {
+            console.log('Initializing Project State:', msg.payload);
+            const store = useProjectStore.getState();
+            if (store.setProject) {
+                store.setProject(msg.payload);
+            }
+            return;
+        }
+
+        if (msg.type === 'StateUpdate') {
+            try {
+                // Parse the Action payload
+                // The backend sends: { type: "ActionType", ... }
+                // Sometimes wrapped in "StateUpdate" structure depending on implementation
+                // Based on ws.rs, it broadcasts the raw JSON string of the Action.
+                // But the frontend wrapper might wrap it. 
+                // Let's assume msg.payload IS the Action object.
+                
+                const action = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;
+                console.log('WS Action:', action);
+                
+                // 1. Update Audio Engine
+                // We pass the raw action to the AudioWorklet via AudioContextManager
+                AudioContextManager.getInstance().sendCommand(action.type, action);
+
+                // 2. Update Local Store (if not originating from self - simpler to just apply always for now)
+                const store = useProjectStore.getState();
+                
+                switch (action.type) {
+                    case 'Play':
+                        store.setIsPlaying(true);
+                        break;
+                    case 'Stop':
+                        store.setIsPlaying(false);
+                        break;
+                    case 'UpdateTrack':
+                        // action.payload is TrackData? No, Action::UpdateTrack(TrackData)
+                        // In JSON: { type: "UpdateTrack", ...properties of TrackData } if untagged?
+                        // Rust Serde enum tagging: #[serde(tag = "type", content = "payload")]
+                        // So it will be { type: "UpdateTrack", payload: { id: 1, vol: 0.5 ... } }
+                        if (action.payload) {
+                            store.updateTrack(action.payload.id, action.payload);
+                        }
+                        break;
+                    case 'AddClip':
+                        if (action.track_id !== undefined && action.clip) {
+                            store.addClip(action.track_id, action.clip); 
+                        }
+                        break;
+                    case 'AddEffect':
+                        if (action.track_id !== undefined && action.effect) {
+                            store.addEffect(action.track_id, action.effect);
+                        }
+                        break;
+                    case 'RemoveEffect':
+                        if (action.track_id !== undefined && action.index !== undefined) {
+                            store.removeEffect(action.track_id, action.index);
+                        }
+                        break;
+                    case 'UpdateEffect':
+                        if (action.track_id !== undefined && action.index !== undefined && action.effect) {
+                            store.updateEffect(action.track_id, action.index, action.effect);
+                        }
+                        break;
+                    // ... Handle other cases
                 }
-                break;
-            case 'Error':
-                console.error('Backend Error:', msg.message);
-                break;
-             // Handle "Init"
-             case 'Init' as any: 
-                console.log('Initializing Project State:', msg.payload);
-                // useProjectStore.getState().setProject(msg.payload);
-                break;
+
+            } catch(e) {
+                console.error('Error handling WS action', e);
+            }
         }
     }
 }
