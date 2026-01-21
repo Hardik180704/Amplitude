@@ -4,6 +4,7 @@ mod processor;
 pub mod graph;
 pub mod nodes;
 pub mod mixer;
+pub mod scheduler;
 pub use processor::WasmAudioProcessor;
 
 #[wasm_bindgen]
