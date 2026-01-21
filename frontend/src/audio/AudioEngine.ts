@@ -7,7 +7,7 @@ class AudioEngine {
     private wasmProcessor: WasmAudioProcessor | null = null;
     private isInitialized: boolean = false;
     private initPromise: Promise<void> | null = null;
-    private bufferSize: number = 4096;
+    private bufferSize: number = 1024; // Lower latency (was 4096)
     private sampleCache: Map<string, AudioBuffer> = new Map();
     private isBusy: boolean = false;
     private interleavedBuffer: Float32Array | null = null;
@@ -195,6 +195,78 @@ class AudioEngine {
         osc.frequency.setValueAtTime(880, this.context.currentTime); // High pitch for visibility
         osc.start();
         osc.stop(this.context.currentTime + 0.5);
+    }
+    
+    public setTrackGain(trackId: number, db: number) {
+        if (!this.wasmProcessor) return;
+        this.wasmProcessor.set_track_gain(trackId, db);
+    }
+
+    public setTrackPan(trackId: number, pan: number) {
+        if (!this.wasmProcessor) return;
+        this.wasmProcessor.set_track_pan(trackId, pan);
+    }
+
+    public setTrackFilter(trackId: number, val: number) {
+        if (!this.wasmProcessor) return;
+        this.wasmProcessor.set_track_filter(trackId, val);
+    }
+    
+    public setTrackEq(trackId: number, low: number, mid: number, high: number) {
+        if (!this.wasmProcessor) return;
+        this.wasmProcessor.set_track_eq(trackId, low, mid, high);
+    }
+    
+    public readTrackMeters(output: Float32Array): number {
+        if (!this.wasmProcessor) return 0;
+        return this.wasmProcessor.read_track_meters(output);
+    }
+
+    public setCrossfaderPosition(pos: number) {
+        if (!this.wasmProcessor) return;
+        this.wasmProcessor.set_crossfader_position(pos);
+    }
+    
+    public setTrackCrossfaderGroup(trackId: number, group: 'A' | 'B' | 'Thru') {
+        if (!this.wasmProcessor) return;
+        const idx = group === 'A' ? -1 : group === 'B' ? 1 : 0;
+        this.wasmProcessor.set_track_crossfader_group(trackId, idx);
+    }
+
+    public setTrackPlaybackRate(trackId: number, rate: number) {
+        if (!this.wasmProcessor) return;
+        this.wasmProcessor.set_track_playback_rate(trackId, rate);
+    }
+
+    public setTrackScratch(trackId: number, velocity: number) {
+        if (!this.wasmProcessor) return;
+        this.wasmProcessor.set_track_scratch(trackId, velocity);
+    }
+    
+    public setTrackFxStutter(trackId: number, enabled: boolean) {
+        if (!this.wasmProcessor) return;
+        this.wasmProcessor.set_track_fx_stutter(trackId, enabled);
+    }
+
+    public setTrackFxTapeStop(trackId: number, enabled: boolean) {
+        if (!this.wasmProcessor) return;
+        this.wasmProcessor.set_track_fx_tape_stop(trackId, enabled);
+    }
+    
+    public setTrackLoop(trackId: number, enabled: boolean, start: number, end: number) {
+        // Legacy support or remove? Let's keep it but add new one.
+        if (!this.wasmProcessor) return;
+        this.wasmProcessor.set_track_loop(trackId, enabled, start, end);
+    }
+
+    public startTrackLoopSeconds(trackId: number, seconds: number) {
+        if (!this.wasmProcessor) return;
+        this.wasmProcessor.start_track_loop_seconds(trackId, seconds);
+    }
+    
+    public updateTrackEffects(trackId: number, effects: any[]) {
+        if (!this.wasmProcessor) return;
+        this.wasmProcessor.update_track_effects(trackId, JSON.stringify(effects));
     }
 }
 
