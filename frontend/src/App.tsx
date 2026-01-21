@@ -1,8 +1,12 @@
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-import { Transport } from './components/Transport'
 import { AppShell } from './components/layout/AppShell';
+import { TopBar } from './components/TopBar';
+import { Panel } from './components/ui/Panel';
+import { Button } from './components/ui/Button';
+import { PianoRoll } from './components/PianoRoll';
+import { useProjectStore } from './store';
+import { MixerChannel } from './components/MixerChannel';
+import { AudioContextManager } from './audio/AudioContextManager';
+import './App.css';
 import { TopBar } from './components/TopBar';
 import { Panel } from './components/ui/Panel';
 import { Button } from './components/ui/Button';
