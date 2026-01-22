@@ -1,4 +1,4 @@
-import { AutomationLane } from '../../store';
+import type { AutomationLane } from '../../store';
 
 export class AutomationRenderer {
     static renderLane(

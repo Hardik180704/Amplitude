@@ -194,7 +194,7 @@ export const Timeline: React.FC = () => {
             onMouseMove={(e) => interactionManager.handleMouseMove(e.nativeEvent)}
             onMouseUp={(e) => {
                 interactionManager.stopScrubbing();
-                interactionManager.handleMouseUp(e.nativeEvent);
+                interactionManager.handleMouseUp();
             }}
             onWheel={(e) => interactionManager.handleWheel(e.nativeEvent)}
         />
