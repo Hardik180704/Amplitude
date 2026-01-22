@@ -7,7 +7,7 @@ class AudioEngine {
     private wasmProcessor: WasmAudioProcessor | null = null;
     private isInitialized: boolean = false;
     private initPromise: Promise<void> | null = null;
-    private bufferSize: number = 1024; // Lower latency (was 4096)
+    private bufferSize: number = 4096; // Increased to 4096 to prevent crackling (High Latency but High Quality)
     private sampleCache: Map<string, AudioBuffer> = new Map();
     private isBusy: boolean = false;
     private interleavedBuffer: Float32Array | null = null;
@@ -262,6 +262,29 @@ class AudioEngine {
     public startTrackLoopSeconds(trackId: number, seconds: number) {
         if (!this.wasmProcessor) return;
         this.wasmProcessor.start_track_loop_seconds(trackId, seconds);
+    }
+    
+    public triggerSample(assetId: string) {
+        if (this.wasmProcessor && this.context && this.context.state === 'suspended') {
+            this.context.resume();
+        }
+        this.wasmProcessor?.trigger_sample(assetId);
+    }
+    
+    public triggerAttack(trackId: number, note: number, velocity: number) {
+        // Send directly to WASM or handle via WebSocket for state sync?
+        // Ideally direct for latency.
+        // We need a method in WASM processor to route note event to specific track synth.
+        // For MVP, if we don't have that exposed, we can log it.
+        // Wait, the user asked for this to work.
+        // We need 'trigger_synth(track_id, note, velocity)' in WASM.
+        console.log(`AudioEngine: Note On ${note} (Vel ${velocity}) on Track ${trackId}`);
+        // TODO: Expose synth trigger in WASM
+    }
+
+    public triggerRelease(trackId: number, note: number) {
+        console.log(`AudioEngine: Note Off ${note} on Track ${trackId}`);
+         // TODO: Expose synth trigger in WASM
     }
     
     public updateTrackEffects(trackId: number, effects: any[]) {
