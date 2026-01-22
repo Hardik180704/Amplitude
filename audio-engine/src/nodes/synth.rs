@@ -2,11 +2,15 @@ use crate::graph::AudioNode;
 use crate::synth::allocator::VoiceAllocator;
 use crate::synth::voice::SynthVoice;
 use crate::midi::{MidiEvent, MidiEventType};
+use crate::modulation::{ModulationMatrix, ModSource, ModTarget};
 
 pub struct SynthNode {
     allocator: VoiceAllocator,
     voices: Vec<SynthVoice>,
     sample_rate: f32,
+    
+    // Matrix
+    pub mod_matrix: ModulationMatrix,
     
     // Internal event queue (could come from graph inputs later)
     pub event_queue: Vec<MidiEvent>,
@@ -19,10 +23,15 @@ impl SynthNode {
             voices.push(SynthVoice::new(sample_rate));
         }
         
+        // Default Matrix: Envelope -> Cutoff
+        let mut mod_matrix = ModulationMatrix::new();
+        mod_matrix.add_connection(ModSource::Envelope(0), ModTarget::FilterCutoff, 0.5); // 50% modulation
+        
         Self {
             allocator: VoiceAllocator::new(max_voices),
             voices,
             sample_rate,
+            mod_matrix,
             event_queue: Vec::new(),
         }
     }
@@ -52,9 +61,6 @@ impl SynthNode {
 impl AudioNode for SynthNode {
     fn process(&mut self, _inputs: &[&[f32]], outputs: &mut [&mut [f32]]) -> bool {
         // Process internal queue first
-        // In a real engine, we'd process events sample-accurately within the loop
-        // For Commit 4, we process all at block start (slight jitter)
-        // Process internal queue first
         let events: Vec<_> = self.event_queue.drain(..).collect();
         for event in events {
             self.handle_event(event);
@@ -74,7 +80,7 @@ impl AudioNode for SynthNode {
         for (i, voice) in self.voices.iter_mut().enumerate() {
             if voice.active {
                 for s in 0..out_l.len() {
-                    let sample = voice.process();
+                    let sample = voice.process(&self.mod_matrix);
                     
                     // Simple Mono Mix to Stereo
                     // TODO: Pan per voice or spread
