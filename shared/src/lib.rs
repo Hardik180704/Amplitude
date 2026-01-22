@@ -1,5 +1,7 @@
 mod project;
 pub use project::*;
+pub mod automation;
+pub use automation::*;
 
 use serde::{Deserialize, Serialize};
 

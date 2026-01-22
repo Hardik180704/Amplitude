@@ -42,6 +42,8 @@ pub struct TrackData {
     pub soloed: bool,
     pub clips: Vec<ClipData>,
     pub effects: Vec<Effect>,
+    #[serde(default)]
+    pub automation: Vec<crate::AutomationLane>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
