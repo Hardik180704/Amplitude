@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { AudioContextManager } from '../audio/AudioContextManager';
 
 interface VirtualKeyboardProps {
@@ -37,14 +37,14 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({ trackId }) => 
             width: '30px',
             height: '100px',
             background: 'black',
-            position: 'absolute' as 'absolute',
+            position: 'absolute' as const,
             border: '1px solid black',
             marginLeft: '-15px',
             zIndex: 1,
             cursor: 'pointer'
         },
         container: {
-            position: 'relative' as 'relative',
+            position: 'relative' as const,
             marginTop: '20px',
             height: '160px',
             padding: '10px',
@@ -53,23 +53,7 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({ trackId }) => 
     };
 
     const handleNoteOn = (note: number) => {
-        // Send NoteOn Command (Mocking helper)
-        const cmd = {
-            Midi: {
-                NoteOn: { track_id: trackId, note, velocity: 100 }
-            }
-        };
-        // In real app, we need to map this structure to what Rust expects via valid JSON
-        // Since we are using shared commands, we likely send:
-        // { type: "NoteOn", trackId, note, velocity: 100 } if we have a JS adapter
-        // Or directly if we exposed the exact JSON structure.
-        
-        // Let's assume AudioContextManager handles the packaging for now
-        // But wait, SharedRingBuffer expects binary struct command usually? 
-        // Or if we use postMessage (legacy bridge):
-        
-        AudioContextManager.getInstance().sendCommand({
-            type: "NoteOn",
+        AudioContextManager.getInstance().sendCommand("NoteOn", {
             trackId,
             note,
             velocity: 100
@@ -77,8 +61,7 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({ trackId }) => 
     };
 
     const handleNoteOff = (note: number) => {
-        AudioContextManager.getInstance().sendCommand({
-            type: "NoteOff",
+        AudioContextManager.getInstance().sendCommand("NoteOff", {
             trackId,
             note
         });
@@ -86,7 +69,7 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({ trackId }) => 
 
     return (
         <div style={styles.container}>
-            {notes.map((n, i) => (
+            {notes.map((n) => (
                 <div
                     key={n.note}
                     style={n.color === 'white' ? styles.white : styles.black}

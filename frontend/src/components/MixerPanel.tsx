@@ -21,7 +21,7 @@ const Meter = ({ trackId }: { trackId: number }) => {
         const meters = new Float32Array(32); // Max tracks assumption or dynamic resize
 
         const render = () => {
-            const _count = audioEngine.readTrackMeters(meters);
+            audioEngine.readTrackMeters(meters);
             const level = meters[trackId] || 0; // Linear peak 0-1+
             
             // Draw Meter

@@ -55,7 +55,7 @@ export const MixerChannel: React.FC<MixerChannelProps> = ({ id, name, onVolumeCh
                     value={volume} 
                     onChange={handleVolume}
                     style={{
-                        writingMode: 'bt-lr', /* Webkit specific for vertical */
+                        writingMode: 'bt-lr' as any, /* Webkit specific for vertical */
                         WebkitAppearance: 'slider-vertical',
                         width: '20px',
                         height: '100%'

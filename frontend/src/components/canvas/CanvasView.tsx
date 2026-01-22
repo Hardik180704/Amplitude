@@ -40,7 +40,7 @@ export const CanvasView = forwardRef<CanvasHandle, CanvasViewProps>(({ onRender,
         // Handle Resize Observer if dynamic
         const resizeObserver = new ResizeObserver(entries => {
              if (!canvas) return;
-             for (let entry of entries) {
+             for (const entry of entries) {
                  const { width, height } = entry.contentRect;
                  // Handle High DPI
                  const dpr = window.devicePixelRatio || 1;
