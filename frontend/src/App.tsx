@@ -220,16 +220,19 @@ function App() {
             <AppShell 
                 header={<TopBar onExportClick={() => setIsExportOpen(true)} onSettingsClick={() => setIsSettingsOpen(true)} />}
         sidebar={
-                <div className="p-4 space-y-4">
-                    <Panel title="Instruments">
-                        <div className="flex flex-col gap-4 text-sm text-text-secondary overflow-y-auto max-h-[400px]">
+                <div className="p-3 space-y-3">
+                    {/* Instuments Rack */}
+                    <Panel title="Instruments" className="bg-bg-panel border border-border rounded-lg shadow-sm">
+                        <div className="flex flex-col gap-1 text-sm text-text-secondary max-h-[300px] overflow-y-auto">
                             {/* Synths Group */}
-                            <div>
-                                <div className="text-[10px] font-black uppercase text-text-muted tracking-widest mb-2 px-2">Synthesizers</div>
+                            <div className="p-2 bg-black/20 rounded border border-white/5 mb-1">
+                                <div className="text-[10px] font-black uppercase text-accent-secondary tracking-widest mb-2 flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-accent-secondary"></span> Synthesizers
+                                </div>
                                 <div className="space-y-1">
                                     {['Super Saw', 'Analogue Bass', 'Pluck Synth', 'Wavetable Lead'].map(inst => (
-                                        <div key={inst} className="p-2 hover:bg-bg-hover rounded cursor-pointer flex items-center gap-2 group transition-colors" onClick={() => handleAddInstrument(inst)}>
-                                            <div className="w-2 h-2 rounded-full bg-indigo-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                                        <div key={inst} className="p-1.5 hover:bg-white/5 hover:text-white rounded cursor-pointer flex items-center gap-2 group transition-all" onClick={() => handleAddInstrument(inst)}>
+                                            <div className="w-[3px] h-[3px] rounded-full bg-current opacity-50 group-hover:opacity-100"></div>
                                             {inst}
                                         </div>
                                     ))}
@@ -237,84 +240,27 @@ function App() {
                             </div>
                             
                             {/* Keys Group */}
-                            <div>
-                                <div className="text-[10px] font-black uppercase text-text-muted tracking-widest mb-2 px-2">Keys</div>
+                            <div className="p-2 bg-black/20 rounded border border-white/5">
+                                <div className="text-[10px] font-black uppercase text-accent-warning tracking-widest mb-2 flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-accent-warning"></span> Keys
+                                </div>
                                 <div className="space-y-1">
                                     {['Grand Piano', 'Rhodes MkI', 'Lo-Fi Keys'].map(inst => (
-                                        <div key={inst} className="p-2 hover:bg-bg-hover rounded cursor-pointer flex items-center gap-2 group transition-colors" onClick={() => handleAddInstrument(inst)}>
-                                            <div className="w-2 h-2 rounded-full bg-amber-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                                        <div key={inst} className="p-1.5 hover:bg-white/5 hover:text-white rounded cursor-pointer flex items-center gap-2 group transition-all" onClick={() => handleAddInstrument(inst)}>
+                                            <div className="w-[3px] h-[3px] rounded-full bg-current opacity-50 group-hover:opacity-100"></div>
                                             {inst}
                                         </div>
                                     ))}
                                 </div>
                             </div>
+                        </div>
+                    </Panel>
 
-                            {/* Pads Group */}
-                            <div>
-                                <div className="text-[10px] font-black uppercase text-text-muted tracking-widest mb-2 px-2">Pads & FX</div>
-                                <div className="space-y-1">
-                                    {['Ethereal Pad', 'Dark Drone', 'Cinematic Sweeps'].map(inst => (
-                                        <div key={inst} className="p-2 hover:bg-bg-hover rounded cursor-pointer flex items-center gap-2 group transition-colors" onClick={() => handleAddInstrument(inst)}>
-                                            <div className="w-2 h-2 rounded-full bg-teal-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                                            {inst}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            
-                            {/* Drums Group */}
-                            <div>
-                                <div className="text-[10px] font-black uppercase text-text-muted tracking-widest mb-2 px-2">Drums</div>
-                                <div className="space-y-1">
-                                    {['808 Kit', '909 Kit', 'Acoustic Kit', 'Breakbeat'].map(inst => (
-                                        <div key={inst} className="p-2 hover:bg-bg-hover rounded cursor-pointer flex items-center gap-2 group transition-colors" onClick={() => handleAddInstrument(inst)}>
-                                            <div className="w-2 h-2 rounded-full bg-rose-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                                            {inst}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </Panel>
-                    <Panel title="Effects">
-                         <div className="space-y-2 text-sm text-text-secondary">
-                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer flex justify-between items-center group"
-                                onClick={() => handleAddEffect('Eq')}
-                            >
-                                <span>EQ</span>
-                                <span className="text-[10px] opacity-0 group-hover:opacity-100 bg-bg-header p-1 rounded">+</span>
-                            </div>
-                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer flex justify-between items-center group"
-                                onClick={() => handleAddEffect('Compressor')}
-                            >
-                                <span>Compressor</span>
-                                <span className="text-[10px] opacity-0 group-hover:opacity-100 bg-bg-header p-1 rounded">+</span>
-                            </div>
-                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer flex justify-between items-center group"
-                                onClick={() => handleAddEffect('Delay')}
-                            >
-                                <span>Delay</span>
-                                <span className="text-[10px] opacity-0 group-hover:opacity-100 bg-bg-header p-1 rounded">+</span>
-                            </div>
-                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer flex justify-between items-center group"
-                                onClick={() => handleAddEffect('Reverb')}
-                            >
-                                <span>Reverb</span>
-                                <span className="text-[10px] opacity-0 group-hover:opacity-100 bg-bg-header p-1 rounded">+</span>
-                            </div>
-                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer flex justify-between items-center group"
-                                onClick={() => handleAddEffect('Bass')}
-                            >
-                                <span>Bass Enhancer</span>
-                                <span className="text-[10px] opacity-0 group-hover:opacity-100 bg-bg-header p-1 rounded">+</span>
-                            </div>
-                        </div>
-                    </Panel>
-                    <Panel title="Resources">
+                    {/* Resources Rack */}
+                    <Panel title="Library" className="bg-bg-panel border border-border rounded-lg shadow-sm">
                         <div className="p-2">
-
-                            <button onClick={handleImportAudio} className="w-full py-2 px-3 flex items-center justify-center gap-2 bg-bg-main border border-border-subtle rounded hover:border-accent-primary/50 text-sm text-text-primary transition-colors dashed-border">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            <button onClick={handleImportAudio} className="w-full py-2 px-3 flex items-center justify-center gap-2 bg-[#1c1c1f] hover:bg-[#27272a] border border-border hover:border-accent-primary/50 rounded text-xs font-bold uppercase tracking-wider text-text-muted hover:text-text-primary transition-all">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                                 Import Audio
                             </button>
                             <input 
@@ -324,9 +270,6 @@ function App() {
                                 accept="audio/*" 
                                 onChange={onFileChange} 
                             />
-                            <div className="mt-2 text-[10px] text-text-muted text-center">
-                                or drop files here
-                            </div>
                         </div>
                     </Panel>
                 </div>

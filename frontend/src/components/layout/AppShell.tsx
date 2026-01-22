@@ -11,34 +11,34 @@ interface AppShellProps {
 
 export const AppShell: React.FC<AppShellProps> = ({ header, sidebar, main, rightPanel, bottomPanel }) => {
     return (
-        <div className="h-screen w-screen grid grid-cols-[auto_1fr_auto] grid-rows-[auto_1fr_auto] bg-bg-main text-text-primary overflow-hidden">
-            {/* Header: Full width */}
-            <header className="col-span-3 h-12 border-b border-white/5 bg-bg-header/50 backdrop-blur-md z-30 flex items-center px-4 shadow-lg">
+        <div className="h-screen w-screen grid grid-cols-[auto_1fr_auto] grid-rows-[auto_1fr_auto] bg-bg-main text-text-primary overflow-hidden gap-2 p-2">
+            {/* Header: Full width, Floating */}
+            <header className="col-span-3 h-14 bg-bg-panel/90 backdrop-blur-md border border-border rounded-xl z-30 flex items-center px-4 shadow-panel">
                 {header}
             </header>
 
-            {/* Left Sidebar */}
+            {/* Left Sidebar: Floating Rack */}
             {sidebar && (
-                <aside className="row-span-1 w-64 border-r border-white/5 bg-bg-panel/80 backdrop-blur-sm overflow-y-auto z-20 shadow-[4px_0_20px_-10px_rgba(0,0,0,0.5)]">
+                <aside className="row-span-1 w-64 bg-bg-panel border border-border rounded-xl overflow-y-auto z-20 shadow-panel flex flex-col">
                     {sidebar}
                 </aside>
             )}
 
-            {/* Main Content Area */}
-            <main className="relative overflow-hidden bg-bg-main z-10">
+            {/* Main Content Area: Floating Canvas */}
+            <main className="relative overflow-hidden bg-bg-panel border border-border rounded-xl z-10 shadow-inner-depth">
                 {main}
             </main>
 
-            {/* Right Panel */}
+            {/* Right Panel: Floating Rack */}
             {rightPanel && (
-                <aside className="w-80 border-l border-white/5 bg-bg-panel z-20 shadow-[-4px_0_20px_-10px_rgba(0,0,0,0.5)] flex flex-col">
+                <aside className="w-80 bg-bg-panel border border-border rounded-xl z-20 shadow-panel flex flex-col overflow-hidden">
                     {rightPanel}
                 </aside>
             )}
 
-            {/* Bottom Panel: Full Width (below sidebar/main/right) */}
+            {/* Bottom Panel: Full Width Synth Deck */}
             {bottomPanel && (
-                <footer className="col-span-3 h-64 border-t border-white/5 bg-bg-panel z-20">
+                <footer className="col-span-3 h-64 bg-bg-panel border border-border rounded-xl z-20 shadow-panel overflow-hidden">
                     {bottomPanel}
                 </footer>
             )}
