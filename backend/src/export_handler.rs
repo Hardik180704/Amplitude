@@ -2,7 +2,7 @@ use axum::{
     Json, extract::State,
 };
 use std::sync::Arc;
-use shared::Project;
+use shared::Action;
 use audio_engine::{mixer::Mixer, export::AudioExporter};
 use crate::ws::AppState;
 use std::fs;
@@ -18,7 +18,7 @@ pub async fn export_project(
     drop(project_guard); // Drop lock early
 
     // 2. Setup Mixer (Headless)
-    let mut mixer = Mixer::new();
+    let mut mixer = Mixer::new(44100.0);
     // TODO: hydrate mixer from project_clone (tracks, clips, etc.)
     // For now, we might need a method "Mixer::from_project(&Project)"
     

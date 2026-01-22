@@ -23,7 +23,7 @@ pub async fn ws_handler(
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
 
-async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
+async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     let mut rx = state.tx.subscribe();
 
     println!("Websocket Connected");
@@ -80,10 +80,10 @@ use shared::Action;
                                     track.clips.push(clip.clone());
                                 }
                             },
-                             Action::MoveClip { clip_id, new_start, track_id } => {
+                             Action::MoveClip { clip_id: _, new_start: _, track_id: _ } => {
                                 // Find clip and move it (Simplified logic)
                                 for track in &mut project.tracks {
-                                    if let Some(pos) = track.clips.iter().position(|c| 
+                                    if let Some(_pos) = track.clips.iter().position(|c| 
                                         match c { shared::ClipData::Audio { .. } => true, _ => false } // Todo: check ID
                                     ) {
                                          // Update clip start
