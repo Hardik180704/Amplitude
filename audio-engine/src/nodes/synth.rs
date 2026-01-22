@@ -59,6 +59,10 @@ impl SynthNode {
 }
 
 impl AudioNode for SynthNode {
+    fn handle_event(&mut self, event: MidiEvent) {
+        self.handle_event(event);
+    }
+
     fn process(&mut self, _inputs: &[&[f32]], outputs: &mut [&mut [f32]]) -> bool {
         // Process internal queue first
         let events: Vec<_> = self.event_queue.drain(..).collect();

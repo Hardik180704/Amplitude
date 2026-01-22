@@ -636,16 +636,6 @@ pub fn set_track_playback_rate(&mut self, track_id: u32, rate: f32) {
     }
 
     pub fn start_loop_seconds(&mut self, track_id: u32, length_seconds: f32) {
-        if let Some(track) = self.tracks.iter_mut().find(|t| t.id == track_id) {
-            if length_seconds <= 0.0 {
-                track.loop_enabled = false;
-            } else {
-                track.loop_start = track.playhead_cursor;
-                track.loop_end = track.playhead_cursor + (length_seconds as f64 * track.sample_rate as f64);
-                track.loop_enabled = true;
-            }
-        }
-    }
 
     pub fn set_track_filter(&mut self, track_id: u32, value: f32) {
         // Value is -1.0 (LPF) to 1.0 (HPF), 0.0 is neutral
