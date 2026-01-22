@@ -54,16 +54,24 @@ impl AudioNode for CompressorNode {
         let (l, r) = outputs.split_at_mut(1);
         let out_l = &mut l[0];
         let out_r = &mut r[0];
+
+        // Sidechain Logic:
+        // If we have more than 2 inputs, assume inputs[2] (and [3]) are the Sidechain Key
+        // Otherwise, use the main input as the Key (standard compression).
+        let has_sidechain = inputs.len() > 2;
+        let key_l = if has_sidechain { inputs[2] } else { in_l };
+        let key_r = if has_sidechain { inputs.get(3).unwrap_or(&key_l) } else { if inputs.len() > 1 { in_r } else { in_l } };
         
         let makeup_linear = db_to_linear(self.makeup_gain_db);
         
         for i in 0..out_l.len() {
-            let abs_l = in_l[i].abs();
-            let abs_r = in_r[i].abs();
-            let max_input = abs_l.max(abs_r);
+            // Key Signal for Envelope
+            let abs_key_l = key_l[i].abs();
+            let abs_key_r = key_r[i].abs();
+            let max_key_input = abs_key_l.max(abs_key_r);
             
             // 1. Envelope Detection
-            let env_linear = self.follower.process(max_input);
+            let env_linear = self.follower.process(max_key_input);
             let env_db = linear_to_db(env_linear + 1e-6); // Avoid log(0)
             
             // 2. Gain Calculation
@@ -78,7 +86,7 @@ impl AudioNode for CompressorNode {
             
             let gain_linear = db_to_linear(gain_change_db) * makeup_linear;
             
-            // 3. Apply Gain
+            // 3. Apply Gain to Main Signal
             out_l[i] = in_l[i] * gain_linear;
             out_r[i] = in_r[i] * gain_linear;
         }
