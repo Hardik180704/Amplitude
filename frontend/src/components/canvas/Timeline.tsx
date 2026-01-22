@@ -44,7 +44,7 @@ export const Timeline: React.FC = () => {
     const render = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, _dt: number) => {
         const project = projectRef.current;
         const viewState = viewStateRef.current;
-        const { zoom, scrollX, selection, draggingClipId, dragOffset, followPlayhead } = viewState;
+        const { zoom, scrollX, selection, draggingClipId, dragOffset, followPlayhead, showAutomation } = viewState;
         
         // Clear background
         ctx.fillStyle = colors.bg;
@@ -128,7 +128,8 @@ export const Timeline: React.FC = () => {
             selection, 
             96, // track height
             draggingClipId,
-            dragOffset
+            dragOffset,
+            showAutomation
         );
         
         // 3. Render Playhead (Overlay)

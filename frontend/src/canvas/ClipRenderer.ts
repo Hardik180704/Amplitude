@@ -1,5 +1,6 @@
 import type { Project } from '../store';
 import { audioEngine } from '../audio/AudioEngine';
+import { AutomationRenderer } from '../components/canvas/AutomationRenderer';
 
 export const ClipRenderer = {
     renderTracks: (
@@ -12,7 +13,8 @@ export const ClipRenderer = {
         selection: number[], // Array of selected IDs
         trackHeight: number = 96,
         draggingClipId?: number,
-        dragOffsetPx?: number
+        dragOffsetPx?: number,
+        showAutomation: boolean = false
     ) => {
         // Calculate visible range (Unused for now, but ready for logic)
         // const startPixel = scrollX;
@@ -73,6 +75,35 @@ export const ClipRenderer = {
             // Draw Separator
             ctx.fillStyle = '#2a2a35';
             ctx.fillRect(0, trackTop + trackHeight - 1, width, 1);
+
+            // AUTO: Render Automation Lanes
+            if (showAutomation && track.automation) {
+                // We define specific colors for targets
+                const autoColor = (target: string) => {
+                    if (target.includes('gain')) return '#4ade80'; // green
+                    if (target.includes('pan')) return '#facc15'; // yellow
+                    return '#3b82f6'; // blue
+                };
+
+                // Move context to track top
+                ctx.save();
+                ctx.translate(0, trackTop);
+                
+                track.automation.forEach(lane => {
+                    AutomationRenderer.renderLane(
+                        ctx,
+                        lane,
+                        width,
+                        trackHeight,
+                        scrollX,
+                        zoom,
+                        project.tempo,
+                        autoColor(lane.target)
+                    );
+                });
+                
+                ctx.restore();
+            }
         });
     }
 };
@@ -103,7 +134,7 @@ const renderWaveform = (
         let max = -1.0;
         
         // Downsample
-        let startIndex = i * step;
+        const startIndex = i * step;
         if (startIndex >= data.length) break;
         
         for (let j = 0; j < step; j++) {
