@@ -32,7 +32,8 @@ export type Effect =
     | { type: 'Eq'; payload: { low_gain: number; mid_gain: number; high_gain: number } }
     | { type: 'Compressor'; payload: { threshold: number; ratio: number; attack: number; release: number; makeup_gain: number } }
     | { type: 'Delay'; payload: { time_ms: number; feedback: number; mix: number } }
-    | { type: 'Reverb'; payload: { mix: number; decay: number } };
+    | { type: 'Reverb'; payload: { mix: number; decay: number } }
+    | { type: 'Bass'; payload: { boost: number; cutoff: number; drive: number; width: number } };
 
 export interface TrackData {
     id: number;
@@ -43,9 +44,11 @@ export interface TrackData {
     soloed: boolean;
     clips: ClipData[];
     effects: Effect[];
-    // DJ State
-    filter?: number; // -1 to 1
-    eq?: { low: number; mid: number; high: number };
+    filter: number; // -1 to 1
+    eq: { low: number; mid: number; high: number };
+    fx_stutter?: boolean;
+    fx_tape_stop?: boolean;
+    loop_enabled?: boolean;
     crossfaderGroup?: 'A' | 'B' | 'Thru';
     playbackRate?: number;
     automation?: AutomationLane[];
@@ -100,6 +103,7 @@ interface ProjectState {
     setProject: (p: Project) => void;
     updateTrack: (id: number, updates: Partial<TrackData>) => void;
     addTrack: (name?: string) => void;
+    deleteTrack: (id: number) => void;
     setIsPlaying: (playing: boolean) => void;
     addClip: (trackId: number, clip: ClipData) => void;
     moveClip: (clipId: number, newStart: number, trackId: number) => void;
@@ -160,7 +164,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
     },
     
     addTrack: (name) => set((state) => {
-        const newId = state.project.tracks.length;
+        const newId = state.project.tracks.length > 0 ? Math.max(...state.project.tracks.map(t => t.id)) + 1 : 0;
         const nextState = {
             project: {
                 ...state.project,
@@ -177,6 +181,18 @@ export const useProjectStore = create<ProjectState>((set) => ({
                     eq: { low: 1, mid: 1, high: 1 }
                 }]
             }
+        };
+        audioEngine.loadProject(JSON.stringify(nextState.project));
+        return nextState;
+    }),
+
+    deleteTrack: (id) => set((state) => {
+        const nextState = {
+            project: {
+                ...state.project,
+                tracks: state.project.tracks.filter(t => t.id !== id)
+            },
+            selectedTrackId: state.selectedTrackId === id ? null : state.selectedTrackId
         };
         audioEngine.loadProject(JSON.stringify(nextState.project));
         return nextState;
