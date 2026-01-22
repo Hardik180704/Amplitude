@@ -11,6 +11,7 @@ class AudioEngine {
     private sampleCache: Map<string, AudioBuffer> = new Map();
     private isBusy: boolean = false;
     private interleavedBuffer: Float32Array | null = null;
+    private masterGainNode: GainNode | null = null;
 
     constructor() {
     }
@@ -35,6 +36,12 @@ class AudioEngine {
                 // Create a ScriptProcessorNode
                 this.processor = this.context.createScriptProcessor(this.bufferSize, 0, 2);
                 (window as any)._audioProcessor = this.processor; // GC Protection
+
+                // Master Gain
+                this.masterGainNode = this.context.createGain();
+                this.masterGainNode.gain.value = 1.0; 
+                this.processor.connect(this.masterGainNode);
+                this.masterGainNode.connect(this.context.destination);
                 
                 this.processor.onaudioprocess = (e) => {
                     const frameCount = e.outputBuffer.length;
@@ -272,19 +279,16 @@ class AudioEngine {
     }
     
     public triggerAttack(trackId: number, note: number, velocity: number) {
-        // Send directly to WASM or handle via WebSocket for state sync?
-        // Ideally direct for latency.
-        // We need a method in WASM processor to route note event to specific track synth.
-        // For MVP, if we don't have that exposed, we can log it.
-        // Wait, the user asked for this to work.
-        // We need 'trigger_synth(track_id, note, velocity)' in WASM.
-        console.log(`AudioEngine: Note On ${note} (Vel ${velocity}) on Track ${trackId}`);
-        // TODO: Expose synth trigger in WASM
+        if (!this.wasmProcessor) return;
+        if (this.context && this.context.state === 'suspended') {
+            this.context.resume();
+        }
+        this.wasmProcessor.trigger_synth_attack(trackId, note, velocity);
     }
 
     public triggerRelease(trackId: number, note: number) {
-        console.log(`AudioEngine: Note Off ${note} on Track ${trackId}`);
-         // TODO: Expose synth trigger in WASM
+        if (!this.wasmProcessor) return;
+        this.wasmProcessor.trigger_synth_release(trackId, note);
     }
     
     public updateTrackEffects(trackId: number, effects: any[]) {
