@@ -95,6 +95,70 @@ const Meter = ({ trackId }: { trackId: number }) => {
     return <canvas ref={canvasRef} width={6} height={160} className="rounded-full bg-slate-900 border border-slate-700" />;
 }
 
+const MasterFader = () => {
+    const [volume, setVolume] = React.useState(1.0);
+    const [isDragging, setIsDragging] = React.useState(false);
+    const faderRef = React.useRef<HTMLDivElement>(null);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        setIsDragging(true);
+        handleMove(e.clientY);
+        document.body.style.cursor = 'ns-resize';
+    };
+
+    const handleMove = (clientY: number) => {
+        if (!faderRef.current) return;
+        const rect = faderRef.current.getBoundingClientRect();
+        const height = rect.height;
+        // 0 at bottom, 1 at top
+        const relativeY = Math.max(0, Math.min(height, rect.bottom - clientY));
+        const val = relativeY / height;
+        setVolume(val);
+        audioEngine.setMasterVolume(val);
+    };
+
+    React.useEffect(() => {
+        const onMouseMove = (e: MouseEvent) => {
+            if (isDragging) handleMove(e.clientY);
+        };
+        const onMouseUp = () => {
+            setIsDragging(false);
+            document.body.style.cursor = 'default';
+        };
+
+        if (isDragging) {
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+        }
+        return () => {
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+        };
+    }, [isDragging]);
+
+    return (
+        <div className="w-16 flex flex-col items-center bg-[#0c0c0e] border border-white/5 rounded-lg p-2 shadow-panel">
+            <span className="text-[9px] font-bold text-accent-primary mb-2">MASTER</span>
+            <div 
+                ref={faderRef}
+                className="flex-1 w-full bg-[#1c1c1f] rounded relative cursor-ns-resize select-none"
+                onMouseDown={handleMouseDown}
+            >
+                {/* Fader Track */}
+                <div className="absolute top-2 bottom-2 left-1/2 -translate-x-1/2 w-[2px] bg-[#333]"></div>
+                {/* Cap */}
+                <div 
+                    className="w-10 h-8 bg-gradient-to-b from-[#333] to-[#111] border border-white/10 rounded-sm absolute left-1/2 -translate-x-1/2 shadow-lg hover:bg-[#444] transition-colors flex items-center justify-center"
+                    style={{ bottom: `calc(${volume * 100}% - 16px)` }}
+                >
+                   <div className="w-full h-[1px] bg-white/50"></div>
+                </div>
+            </div>
+             <span className="text-[9px] font-mono text-white/50 mt-2">{(volume * 100).toFixed(0)}%</span>
+        </div>
+    );
+};
+
 const Crossfader = ({ value, onChange }: { value: number, onChange: (v: number) => void }) => {
     return (
         <div className="h-20 border-t border-black flex items-center justify-center px-8 relative bg-[#0a0a0a]">
@@ -266,9 +330,18 @@ export const MixerPanel = () => {
     const { project, updateTrack, selectedTrackId, setSelectedTrack, crossfaderPosition, setCrossfaderPosition, setTrackCrossfaderGroup } = useProjectStore();
 
     return (
-        <div className="h-full min-h-[500px] flex flex-col bg-transparent">
-             {/* Tracks Container */}
-            <div className="flex-1 overflow-x-auto flex flex-row divide-x divide-white/5">
+        <div className="h-full flex flex-col bg-bg-panel border-l border-border relative">
+             {/* Metal Texture Overlay */}
+             <div className="absolute inset-0 bg-metallic opacity-20 pointer-events-none"></div>
+
+             <div className="p-3 border-b border-border bg-bg-header relative z-10 flex justify-between items-center">
+                <h3 className="text-[10px] font-black text-text-muted tracking-[0.2em] uppercase">Mixer Console</h3>
+             </div>
+             
+             <div className="flex-1 overflow-x-auto p-4 flex gap-4 relative z-10">
+                {/* Master Fader (Left Fixed) */}
+                 <MasterFader />
+
                 {project.tracks.map(track => (
                     <ChannelStrip 
                         key={track.id} 
