@@ -17,3 +17,5 @@ pub mod wavetable;
 pub use wavetable::WavetableNode;
 pub mod filter;
 pub use filter::FilterNode;
+pub mod bass_enhancer;
+pub use bass_enhancer::BassEnhancerNode;
