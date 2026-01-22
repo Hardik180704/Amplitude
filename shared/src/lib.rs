@@ -47,6 +47,9 @@ pub enum MixerCommand {
     
     Play,
     Stop,
+    
+    // One-Shot
+    TriggerSample { asset_id: String },
 }
 
 #[derive(Serialize, Deserialize, Debug)]

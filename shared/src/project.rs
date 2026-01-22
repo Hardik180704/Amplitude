@@ -105,5 +105,13 @@ pub enum Effect {
     Reverb {
         mix: f32,
         decay: f32,
+    },
+    Bass {
+        boost: f32,
+        cutoff: f32,
+        #[serde(default)]
+        drive: f32,
+        #[serde(default)] 
+        width: f32,
     }
 }
