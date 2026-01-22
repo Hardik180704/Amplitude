@@ -152,6 +152,11 @@ impl WasmAudioProcessor {
         self.mixer.start_loop_seconds(track_id, length_seconds);
     }
 
+    pub fn trigger_sample(&mut self, asset_id: String) {
+        web_sys::console::log_1(&format!("WASM: trigger_sample called for {}", asset_id).into());
+        self.mixer.trigger_sample(asset_id);
+    }
+
     /// Fills the output array with peak values for each track.
     /// Expected size: num_tracks
     /// Returns the number of tracks written.
