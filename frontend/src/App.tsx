@@ -13,6 +13,7 @@ import { useProjectStore, type Effect } from './store';
 import './App.css';
 
 import { PianoRollCanvas } from './components/canvas/PianoRollCanvas';
+import { VirtualKeyboard } from './components/VirtualKeyboard';
 import { interactionManager } from './interactions/InteractionManager';
 import { audioEngine } from './audio/AudioEngine';
 import { transport } from './audio/TransportManager';
@@ -153,6 +154,7 @@ function App() {
         else if (type === 'Compressor') newEffect = { type: 'Compressor', payload: { threshold: -20, ratio: 4, attack: 10, release: 100, makeup_gain: 0 }};
         else if (type === 'Delay') newEffect = { type: 'Delay', payload: { time_ms: 300, feedback: 0.4, mix: 0.5 }};
         else if (type === 'Reverb') newEffect = { type: 'Reverb', payload: { mix: 0.5, decay: 2.0 }};
+        else if (type === 'Bass') newEffect = { type: 'Bass', payload: { boost: 6.0, cutoff: 100, drive: 0, width: 1.0 }};
         else return;
 
         addEffect(selectedTrackId, newEffect);
@@ -220,12 +222,58 @@ function App() {
         sidebar={
                 <div className="p-4 space-y-4">
                     <Panel title="Instruments">
-                        <div className="space-y-2 text-sm text-text-secondary">
-                             {/* Placeholder logic for now - user asked about instruments too */}
-                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer" onClick={() => handleAddInstrument("Keys")}>Keyboards</div>
-                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer" onClick={() => handleAddInstrument("Drums")}>Drums</div>
-                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer" onClick={() => handleAddInstrument("Guitar")}>Guitars</div>
-                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer" onClick={() => handleAddInstrument("Bass")}>Bass</div>
+                        <div className="flex flex-col gap-4 text-sm text-text-secondary overflow-y-auto max-h-[400px]">
+                            {/* Synths Group */}
+                            <div>
+                                <div className="text-[10px] font-black uppercase text-text-muted tracking-widest mb-2 px-2">Synthesizers</div>
+                                <div className="space-y-1">
+                                    {['Super Saw', 'Analogue Bass', 'Pluck Synth', 'Wavetable Lead'].map(inst => (
+                                        <div key={inst} className="p-2 hover:bg-bg-hover rounded cursor-pointer flex items-center gap-2 group transition-colors" onClick={() => handleAddInstrument(inst)}>
+                                            <div className="w-2 h-2 rounded-full bg-indigo-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                                            {inst}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            {/* Keys Group */}
+                            <div>
+                                <div className="text-[10px] font-black uppercase text-text-muted tracking-widest mb-2 px-2">Keys</div>
+                                <div className="space-y-1">
+                                    {['Grand Piano', 'Rhodes MkI', 'Lo-Fi Keys'].map(inst => (
+                                        <div key={inst} className="p-2 hover:bg-bg-hover rounded cursor-pointer flex items-center gap-2 group transition-colors" onClick={() => handleAddInstrument(inst)}>
+                                            <div className="w-2 h-2 rounded-full bg-amber-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                                            {inst}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Pads Group */}
+                            <div>
+                                <div className="text-[10px] font-black uppercase text-text-muted tracking-widest mb-2 px-2">Pads & FX</div>
+                                <div className="space-y-1">
+                                    {['Ethereal Pad', 'Dark Drone', 'Cinematic Sweeps'].map(inst => (
+                                        <div key={inst} className="p-2 hover:bg-bg-hover rounded cursor-pointer flex items-center gap-2 group transition-colors" onClick={() => handleAddInstrument(inst)}>
+                                            <div className="w-2 h-2 rounded-full bg-teal-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                                            {inst}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            {/* Drums Group */}
+                            <div>
+                                <div className="text-[10px] font-black uppercase text-text-muted tracking-widest mb-2 px-2">Drums</div>
+                                <div className="space-y-1">
+                                    {['808 Kit', '909 Kit', 'Acoustic Kit', 'Breakbeat'].map(inst => (
+                                        <div key={inst} className="p-2 hover:bg-bg-hover rounded cursor-pointer flex items-center gap-2 group transition-colors" onClick={() => handleAddInstrument(inst)}>
+                                            <div className="w-2 h-2 rounded-full bg-rose-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                                            {inst}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </Panel>
                     <Panel title="Effects">
@@ -252,6 +300,12 @@ function App() {
                                 onClick={() => handleAddEffect('Reverb')}
                             >
                                 <span>Reverb</span>
+                                <span className="text-[10px] opacity-0 group-hover:opacity-100 bg-bg-header p-1 rounded">+</span>
+                            </div>
+                            <div className="p-2 hover:bg-bg-hover rounded cursor-pointer flex justify-between items-center group"
+                                onClick={() => handleAddEffect('Bass')}
+                            >
+                                <span>Bass Enhancer</span>
                                 <span className="text-[10px] opacity-0 group-hover:opacity-100 bg-bg-header p-1 rounded">+</span>
                             </div>
                         </div>
@@ -310,7 +364,18 @@ function App() {
                             <PianoRollCanvas clipId={selectedClip.id} trackId={selectedClipTrackId} />
                          </div>
                     </div>
-                ) : null
+                ) : (
+                    /* Show Virtual Keyboard if a track is selected but no clip is open */
+                    selectedTrackId !== null ? (
+                        <div className="h-48 border-t border-border-subtle bg-bg-main">
+                            <VirtualKeyboard trackId={selectedTrackId} />
+                        </div>
+                    ) : (
+                         <div className="h-48 border-t border-border-subtle bg-bg-main flex items-center justify-center text-text-muted text-xs">
+                             Select a track to play instrument
+                         </div>
+                    )
+                )
             }
         />
         <ExportModal 
