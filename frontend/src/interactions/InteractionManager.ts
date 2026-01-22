@@ -10,6 +10,7 @@ export interface InteractionState {
     dragOffset?: number; 
     isScrubbing: boolean;
     followPlayhead: boolean;
+    showAutomation: boolean;
 }
 
 export type InteractionCallback = (state: InteractionState) => void;
@@ -25,9 +26,10 @@ export class InteractionManager {
     // Pro Features
     private isScrubbing: boolean = false;
     private followPlayhead: boolean = true;
+    private showAutomation: boolean = false;
     private autoScrollSpeed: number = 0;
     private autoScrollRafId: number | null = null;
-    private canvasOffsetLeft: number = 0; // Dynamic offset for scrubbing
+    private canvasOffsetLeft: number = 0; // Dynamic offset for skipping
     
     // Clip Drag State
     private isDraggingClip: boolean = false;
@@ -64,6 +66,11 @@ export class InteractionManager {
         this.isScrubbing = false;
         this.notify();
     }
+    
+    public toggleAutomation() {
+        this.showAutomation = !this.showAutomation;
+        this.notify();
+    }
 
     public selectClip(id: number, exclusive: boolean = true) {
         if (exclusive) {
@@ -94,7 +101,8 @@ export class InteractionManager {
             draggingClipId: this.draggingClipId || undefined,
             dragOffset: this.currentDragOffset,
             isScrubbing: this.isScrubbing,
-            followPlayhead: this.followPlayhead
+            followPlayhead: this.followPlayhead,
+            showAutomation: this.showAutomation
         };
     }
 
@@ -227,7 +235,7 @@ export class InteractionManager {
         this.autoScrollSpeed = 0;
     }
 
-    public handleMouseUp(_e: MouseEvent) {
+    public handleMouseUp() {
         if (this.isDraggingClip && this.draggingClipId !== null) {
             // Commit drag
             const store = useProjectStore.getState();
