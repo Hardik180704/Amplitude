@@ -3,6 +3,11 @@ use crate::graph::AudioNode;
 use crate::midi::{MidiClip, MidiEvent};
 use shared::{Project, ClipData, Effect};
 
+fn linear_to_db_approx(val: f32) -> f32 {
+    if val <= 0.0001 { -80.0 } else { 20.0 * val.log10() }
+}
+
+
 // Represents a piece of audio on the timeline
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum CrossfaderGroup {
@@ -53,6 +58,9 @@ pub struct Track {
     pub loop_enabled: bool,
     pub loop_start: f64, // Absolute sample position
     pub loop_end: f64,   // Absolute sample position
+    
+    // Automation
+    pub automation: Vec<shared::AutomationLane>,
 }
 
 impl Track {
@@ -82,6 +90,7 @@ impl Track {
             loop_enabled: false,
             loop_start: 0.0,
             loop_end: 0.0,
+            automation: Vec::new(),
         }
     }
     
@@ -90,9 +99,54 @@ impl Track {
             self.synth = Some(SynthNode::new(self.sample_rate, 8)); // 8 Voice Polyphony
         }
     }
+    
+    // Helper to apply automation at the start of a block
+    fn apply_automation(&mut self) {
+        let current_time_sec = self.playhead_cursor / self.sample_rate as f64;
+        
+        // We clone to iterate to avoid borrow checker issues with self mutation?
+        // Actually, we can't iterate self.automation and mutate self at same time easily.
+        // We need to extract the values first.
+        let values: Vec<(String, f32)> = self.automation.iter()
+            .map(|lane| (lane.target.clone(), lane.get_value_at(current_time_sec)))
+            .collect();
+            
+        for (target, value) in values {
+            match target.as_str() {
+                "gain" => self.gain_node.set_gain(shared::db_to_linear(linear_to_db_approx(value))), // Value 0-1 mapped? Assuming automation is 0-1 linear
+                "pan" => self.pan = value, // -1 to 1
+                "filter" => self.apply_filter_value(value), // Helper needed
+                _ => {}
+            }
+        }
+    }
+    
+    pub fn apply_filter_value(&mut self, value: f32) {
+         // Same logic as set_track_filter in Mixer
+         use crate::nodes::filter::FilterType;
+         if value.abs() < 0.05 {
+             self.filter_node.set_params(20000.0, 0.0, FilterType::LowPass);
+         } else if value < 0.0 {
+             let normalized = value.abs();
+             let min_freq = 20.0f32;
+             let max_freq = 20000.0f32;
+             let cutoff = max_freq * (min_freq / max_freq).powf(normalized);
+             self.filter_node.set_params(cutoff, 0.5, FilterType::LowPass);
+         } else {
+             let normalized = value;
+             let min_freq = 20.0f32;
+             let max_freq = 15000.0f32;
+             let cutoff = min_freq * (max_freq / min_freq).powf(normalized);
+             self.filter_node.set_params(cutoff, 0.5, FilterType::HighPass);
+         }
+    }
 
     // Process a block of audio for this track
     pub fn process(&mut self, output: &mut [&mut [f32]], scratch_l: &mut [f32], scratch_r: &mut [f32], current_time: u64, asset_cache: &std::collections::HashMap<String, (Vec<f32>, Vec<f32>)>) {
+        
+        // Apply Automation for this block
+        self.apply_automation();
+
         if self.muted {
              for channel in output.iter_mut() {
                  channel.fill(0.0);
@@ -618,6 +672,7 @@ impl Mixer {
             track.pan = track_data.pan;
             track.muted = track_data.muted;
             track.soloed = track_data.soloed;
+            track.automation = track_data.automation.clone();
             
             // Hydrate Effects
             track.effects.clear();
