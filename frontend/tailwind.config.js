@@ -8,40 +8,47 @@ export default {
       extend: {
         colors: {
           bg: {
-            main: '#0a0e17',      // Darker, bluer background (Sapphire Deep)
-            panel: '#111625',     // Slightly lighter panel
-            header: '#161b2e',
-            hover: '#1e263d',
-            glass: 'rgba(17, 22, 37, 0.7)',
+            main: '#121214',      // Deep Graphite (Background)
+            panel: '#18181b',     // Zinc-900 (Panels)
+            header: '#18181b',    // Match panel for seamless headers
+            hover: '#27272a',     // Zinc-800
+            glass: 'rgba(24, 24, 27, 0.7)', // Glassy Zinc
+            active: '#27272a',    
           },
           text: {
-            primary: '#e2e8f0',   // Slate 200
-            secondary: '#94a3b8', // Slate 400
-            muted: '#64748b',     // Slate 500
+            primary: '#f4f4f5',   // Zinc-100 (High Contrast)
+            secondary: '#a1a1aa', // Zinc-400
+            muted: '#52525b',     // Zinc-600
           },
           accent: {
-            primary: '#3b82f6',   // Blue 500 (Sapphire Neon)
-            secondary: '#6366f1', // Indigo 500
-            success: '#10b981',
-            warning: '#f59e0b',
-            danger: '#ef4444',
+            primary: '#3b82f6',   // Electric Blue
+            secondary: '#8b5cf6', // Vivid Violet
+            success: '#10b981',   // Emerald
+            warning: '#f59e0b',   // Amber
+            danger: '#ef4444',    // Red-500
           },
           border: {
-             DEFAULT: 'rgba(255, 255, 255, 0.08)',
-             subtle: 'rgba(255, 255, 255, 0.04)',
-             active: 'rgba(59, 130, 246, 0.5)',
+             DEFAULT: '#27272a',  // Zinc-800
+             subtle: '#1f1f22',   // Zinc-900/800 mix
+             active: '#3b82f6',   // Blue Border
           }
         },
         boxShadow: {
-            'glow-sm': '0 0 10px rgba(59, 130, 246, 0.3)',
-            'glow-md': '0 0 20px rgba(59, 130, 246, 0.4)',
-            'panel': '0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3)',
+            'glow-sm': '0 0 10px rgba(59, 130, 246, 0.15)',
+            'glow-md': '0 0 20px rgba(59, 130, 246, 0.25)',
+            'panel': '0 4px 20px -5px rgba(0, 0, 0, 0.5)',
+            'knob': '0 2px 5px rgba(0,0,0,0.5)',
+            'inner-depth': 'inset 0 2px 4px rgba(0,0,0,0.5)',
         },
         fontFamily: {
              mono: ['JetBrains Mono', 'Menlo', 'monospace'],
              sans: ['Inter', 'system-ui', 'sans-serif'],
+        },
+        backgroundImage: {
+            'metallic': 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.0) 100%)',
+            'stripes': 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 20px)',
         }
       },
     },
     plugins: [],
-  }
+}
