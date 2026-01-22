@@ -4,7 +4,7 @@ import { useProjectStore } from '../store';
 import { Timeline } from './canvas/Timeline';
 
 export const ArrangementView: React.FC = () => {
-    const { project, addTrack } = useProjectStore();
+    const { project, addTrack, deleteTrack } = useProjectStore();
     
     return (
       <div className="relative w-full h-full bg-bg-main flex flex-col">
@@ -42,6 +42,13 @@ export const ArrangementView: React.FC = () => {
                                 <div className="flex gap-2 mb-1">
                                     <button className={`w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold border transition-colors ${t.muted ? 'bg-accent-warning text-black border-accent-warning' : 'bg-bg-main border-border-subtle text-text-muted hover:border-text-muted'}`}>M</button>
                                     <button className={`w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold border transition-colors ${t.soloed ? 'bg-accent-secondary text-white border-accent-secondary' : 'bg-bg-main border-border-subtle text-text-muted hover:border-text-muted'}`}>S</button>
+                                    <button 
+                                        className="w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold border border-transparent text-text-muted hover:text-accent-danger hover:border-accent-danger/50 transition-colors opacity-0 group-hover:opacity-100"
+                                        title="Delete Track"
+                                        onClick={(e) => { e.stopPropagation(); deleteTrack(t.id); }}
+                                    >
+                                        ✕
+                                    </button>
                                 </div>
                             </div>
                         </div>

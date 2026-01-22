@@ -63,6 +63,31 @@ const EffectUnit = ({ trackId, index, effect }: { trackId: number, index: number
                             <Knob label="Decay" value={effect.payload.decay} min={0.1} max={10} step={0.1} onChange={v => updateParam('decay', v)} />
                     </div>
                  );
+            case 'Bass':
+                 return (
+                    <div className="w-full relative">
+                        {/* Background Texture */}
+                        <div className="absolute inset-0 bg-[#000] opacity-30 rounded-lg pointer-events-none"></div>
+                        
+                        <div className="relative flex flex-col gap-2 p-1">
+                            {/* Tone Section */}
+                            <div className="flex items-center justify-between bg-white/5 rounded p-2 border border-white/5">
+                                <div className="text-[8px] font-black text-white/30 tracking-widest -rotate-90 w-2 whitespace-nowrap">TONE</div>
+                                <Knob label="Boost" value={effect.payload.boost} min={0} max={48} onChange={v => updateParam('boost', v)} size={40} color="#ec4899" />
+                                <div className="w-[1px] h-8 bg-white/10"></div>
+                                <Knob label="Freq" value={effect.payload.cutoff} min={30} max={300} onChange={v => updateParam('cutoff', v)} size={40} color="#ec4899" />
+                            </div>
+
+                            {/* Character Section */}
+                            <div className="flex items-center justify-between bg-white/5 rounded p-2 border border-white/5">
+                                <div className="text-[8px] font-black text-white/30 tracking-widest -rotate-90 w-2 whitespace-nowrap">CHAR</div>
+                                <Knob label="Drive" value={effect.payload.drive || 0} min={0} max={100} onChange={v => updateParam('drive', v)} size={40} color="#f472b6" />
+                                <div className="w-[1px] h-8 bg-white/10"></div>
+                                <Knob label="Width" value={effect.payload.width !== undefined ? effect.payload.width : 1} min={0} max={1} step={0.01} onChange={v => updateParam('width', v)} size={40} color="#f472b6" />
+                            </div>
+                        </div>
+                    </div>
+                 );
             default:
                 return null;
         }
@@ -103,6 +128,7 @@ export const EffectRack: React.FC<EffectRackProps> = ({ trackId }) => {
         else if (type === 'Compressor') newEffect = { type: 'Compressor', payload: { threshold: -20, ratio: 4, attack: 10, release: 100, makeup_gain: 0 }};
         else if (type === 'Delay') newEffect = { type: 'Delay', payload: { time_ms: 300, feedback: 0.4, mix: 0.5 }};
         else if (type === 'Reverb') newEffect = { type: 'Reverb', payload: { mix: 0.5, decay: 2.0 }};
+        else if (type === 'Bass') newEffect = { type: 'Bass', payload: { boost: 6.0, cutoff: 100.0, drive: 0, width: 1.0 }};
         else return;
         
         addEffect(trackId, newEffect);
@@ -127,11 +153,12 @@ export const EffectRack: React.FC<EffectRackProps> = ({ trackId }) => {
             </div>
             
             <div className="p-3 border-t border-border-subtle bg-bg-header">
-                <div className="grid grid-cols-4 gap-1">
+                <div className="grid grid-cols-5 gap-1">
                      <button className="text-[10px] bg-bg-main border border-border-subtle hover:border-accent-primary hover:text-accent-primary transition-colors py-1 rounded" onClick={() => handleAdd('Eq')}>EQ</button>
                      <button className="text-[10px] bg-bg-main border border-border-subtle hover:border-accent-primary hover:text-accent-primary transition-colors py-1 rounded" onClick={() => handleAdd('Compressor')}>CMP</button>
                      <button className="text-[10px] bg-bg-main border border-border-subtle hover:border-accent-primary hover:text-accent-primary transition-colors py-1 rounded" onClick={() => handleAdd('Delay')}>DLY</button>
                      <button className="text-[10px] bg-bg-main border border-border-subtle hover:border-accent-primary hover:text-accent-primary transition-colors py-1 rounded" onClick={() => handleAdd('Reverb')}>VRB</button>
+                     <button className="text-[10px] bg-bg-main border border-border-subtle hover:border-accent-primary hover:text-accent-primary transition-colors py-1 rounded text-pink-400 font-bold" onClick={() => handleAdd('Bass')}>BASS</button>
                 </div>
             </div>
         </div>
