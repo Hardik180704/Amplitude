@@ -1,4 +1,4 @@
-use crate::nodes::{GainNode, SynthNode, CompressorNode, DelayNode, EqNode, FilterNode};
+use crate::nodes::{GainNode, SynthNode, CompressorNode, DelayNode, EqNode, FilterNode, BassEnhancerNode};
 use crate::graph::AudioNode;
 use crate::midi::{MidiClip, MidiEvent};
 use shared::{Project, ClipData, Effect};
@@ -380,12 +380,20 @@ pub struct Mixer {
     pub scratch_r: Vec<f32>,
     
     pub crossfader_position: f32, // -1.0 (A) to 1.0 (B)
+    
+    // Soundboard
+    pub active_samples: Vec<SampleEvent>,
+}
+
+pub struct SampleEvent {
+    pub asset_id: String,
+    pub cursor: usize,
 }
 
 impl Mixer {
 
     pub fn new(sample_rate: f32) -> Self {
-        Self {
+        let mut mixer = Self {
             tracks: Vec::new(),
             master_gain: GainNode::new(1.0),
             sample_rate,
@@ -397,11 +405,166 @@ impl Mixer {
             scratch_l: vec![0.0; 8192],
             scratch_r: vec![0.0; 8192],
             crossfader_position: 0.0,
+            active_samples: Vec::new(),
+        };
+        
+        // Generate Default SFX
+        mixer.generate_default_sfx();
+        mixer
+    }
+    
+    fn generate_default_sfx(&mut self) {
+        // 1. Authentic DJ Airhorn ("The Horn")
+        // Recipe: Cluster of detuned Saw/Square waves + Hard Clipping + High Pass Filter (for the "spit")
+        // Frequencies: Harmonically complex chord (e.g., C# + G# + B)
+        
+        let sample_len = (self.sample_rate * 2.5) as usize; 
+        let gen_len = (self.sample_rate * 0.6) as usize; // Sustained blast
+        let mut temp_l = vec![0.0; sample_len];
+        let mut temp_r = vec![0.0; sample_len];
+        
+        // Accurate Airhorn Cluster: 
+        // A real airhorn (Grover/Hadley) often sounds around F#4 / G4.
+        // Let's use a dissonant cluster: F#4 (370), G4 (392), C#5 (554)
+        // This minor/dissonant clash gives the aggression.
+        let freqs = [
+            370.0, // F#4
+            392.0, // G4 (The rub)
+            554.0, // C#5
+            740.0, // F#5
+        ];
+        
+        for i in 0..gen_len {
+            let t = i as f32 / self.sample_rate;
+            
+            let mut sum = 0.0;
+            
+            for f in freqs {
+                // Pitch Envelope: "Pew" effect at start (The compressed air release)
+                // Drop 80Hz over first 30ms
+                let pitch_mod = if t < 0.03 { (1.0 - t/0.03) * 80.0 } else { 0.0 };
+                
+                // Vibrato: Slight instability
+                let vib = (t * 25.0).sin() * 2.0;
+                
+                let current_freq = f + pitch_mod + vib;
+                
+                // Waveform: Blended Saw (sharp) and Square (hollow)
+                let phase = (t * current_freq) % 1.0;
+                let saw = phase * 2.0 - 1.0;
+                let square = if phase > 0.5 { 1.0 } else { -1.0 };
+                
+                // Mix sawtooth dominance for buzz
+                sum += saw * 0.7 + square * 0.3;
+            }
+            
+            sum /= freqs.len() as f32;
+            
+            // Amp Envelope: Instant attack, full sustain, sharp release
+            let amp = if t > (gen_len as f32 / self.sample_rate) - 0.1 {
+                 1.0 - (t - ((gen_len as f32 / self.sample_rate) - 0.1)) / 0.1
+            } else {
+                1.0
+            };
+            
+            // Output gain boost before clip
+            let drive = 10.0;
+            let clipped = (sum * drive).clamp(-0.95, 0.95); // Hard digital clip for distinct "sample" sound
+            
+            temp_l[i] = clipped * amp;
+            temp_r[i] = clipped * amp;
         }
+        
+        // Airhorn Delay: Specific "Dancehall" echo (1/8th note, moderate feedback)
+        let delay_ms = 165.0; 
+        let feedback = 0.45;
+        let delay_samples = (delay_ms / 1000.0 * self.sample_rate) as usize;
+        
+        for i in delay_samples..sample_len {
+             temp_l[i] += temp_r[i - delay_samples] * feedback; 
+             temp_r[i] += temp_l[i - delay_samples] * feedback;
+        }
+        
+        self.add_sample("horn".to_string(), temp_l, temp_r);
+        
+        // 2. Classic Dub Siren
+        // Authentic Dub Siren recipe:
+        // - Carrier: Sine/Triangle wave
+        // - Pitch: Modulated by a separate LFO (Square/Triangle usually, here Triangle)
+        // - Range: Mid-High (600Hz to 1200Hz)
+        // - Speed: ~8Hz LFO for "Wee-ooo-wee-ooo"
+        // - Delay: Heavy feedback echo
+        
+        let len = (self.sample_rate * 4.0) as usize; // 4 seconds total (sound + echo tail)
+        let active_len = (self.sample_rate * 2.0) as usize; // 2 seconds of active siren
+        
+        let mut siren_l = vec![0.0; len];
+        let mut siren_r = vec![0.0; len];
+        
+        // Siren State
+        let lfo_speed = 8.0; // 8 Hz "Wee-ooo"
+        let base_freq = 800.0;
+        let mod_depth = 400.0;
+        let mut phase = 0.0;
+        
+        for i in 0..len {
+            // Stop generating source after 2s, let delay ring out
+            if i < active_len {
+                let t = i as f32 / self.sample_rate;
+                
+                // LFO: Triangle Wave for smoother sweep (0.0 to 1.0 to 0.0 range)
+                let lfo_phase = (t * lfo_speed) % 1.0;
+                let lfo_val = if lfo_phase < 0.5 {
+                    lfo_phase * 2.0 // 0 to 1
+                } else {
+                    1.0 - (lfo_phase - 0.5) * 2.0 // 1 to 0
+                };
+                
+                // Modulated Frequency
+                let current_freq = base_freq + (lfo_val * mod_depth);
+                
+                // Carrier: Sine Wave
+                phase += current_freq / self.sample_rate;
+                if phase > 1.0 { phase -= 1.0; }
+                
+                let raw_sample = (phase * 2.0 * std::f32::consts::PI).sin();
+                
+                // Trigger Envelope (slight attack/release)
+                let amp = if t < 0.05 { t / 0.05 } else if t > 1.9 { 1.0 - (t - 1.9) / 0.1 } else { 1.0 };
+                
+                siren_l[i] = raw_sample * 0.6 * amp;
+                siren_r[i] = raw_sample * 0.6 * amp;
+            }
+        }
+        
+        // Dub Delay (Ping Pong)
+        let delay_ms = 250.0; // 1/4 note-ish
+        let delay_samples = (delay_ms / 1000.0 * self.sample_rate) as usize;
+        let feedback = 0.6;
+        
+        for i in delay_samples..len {
+            siren_l[i] += siren_r[i - delay_samples] * feedback;
+            siren_r[i] += siren_l[i - delay_samples] * feedback;
+        }
+
+        self.add_sample("siren".to_string(), siren_l, siren_r);
+        // web_sys::console::log_1(&"Mixer: Default SFX Generated (Horn, Siren)".into());
     }
     
     pub fn add_sample(&mut self, id: String, left: Vec<f32>, right: Vec<f32>) {
         self.samples.insert(id, (left, right));
+    }
+
+    pub fn trigger_sample(&mut self, id: String) {
+        if self.samples.contains_key(&id) {
+            web_sys::console::log_1(&format!("Mixer: Adding active sample '{}'", id).into());
+            self.active_samples.push(SampleEvent {
+                asset_id: id,
+                cursor: 0,
+            });
+        } else {
+             web_sys::console::log_1(&format!("Mixer: Sample '{}' not found in library", id).into());
+        }
     }
 
     pub fn set_playing(&mut self, playing: bool) {
@@ -411,13 +574,14 @@ impl Mixer {
     pub fn seek(&mut self, time_samples: u64) {
         self.current_time = time_samples;
         for track in &mut self.tracks {
-             if let Some(synth) = &mut track.synth {
+             if let Some(_synth) = &mut track.synth {
                  // synth.all_notes_off(); 
              }
              // Sync track cursor
              track.playhead_cursor = time_samples as f64;
         }
     }
+
     
     pub fn add_track(&mut self) -> u32 {
         let id = self.tracks.len() as u32;
@@ -560,6 +724,11 @@ pub fn set_track_playback_rate(&mut self, track_id: u32, rate: f32) {
                      },
                      Effect::Reverb { .. } => {
                           // No-op
+                     },
+                     Effect::Bass { boost, cutoff, drive, width } => {
+                          let mut node = BassEnhancerNode::new(self.sample_rate);
+                          node.set_params(boost, cutoff, drive, width);
+                          track.effects.push(Box::new(node));
                      }
                  }
             }
@@ -573,13 +742,8 @@ pub fn set_track_playback_rate(&mut self, track_id: u32, rate: f32) {
             channel.fill(0.0);
         }
 
-        if !self.is_playing {
-            return;
-        }
-
         let samples = output[0].len();
-        
-        // Ensure buffers are large enough
+
         if self.track_buf_l.len() < samples {
              self.track_buf_l.resize(samples, 0.0);
              self.track_buf_r.resize(samples, 0.0);
@@ -587,68 +751,91 @@ pub fn set_track_playback_rate(&mut self, track_id: u32, rate: f32) {
              self.scratch_r.resize(samples, 0.0);
         }
 
-        for track in &mut self.tracks {
-             // Use pre-allocated buffers
-             let track_slice_l = &mut self.track_buf_l[..samples];
-             let track_slice_r = &mut self.track_buf_r[..samples];
-             
-             // Clear track buffers is handled by track.process filling them with 0.0 if not cleared? 
-             // Actually track.process clears first thing.
-             
-             // Create slice vector for track output
-             // Note: We create this small vec every time, but it's just pointers. 
-             // Ideally we passed &mut [&mut [f32]] directly but creating the vec on stack is fine.
-             let mut track_io = vec![track_slice_l, track_slice_r];
-             
-             // Scratch slices
-             let scratch_slice_l = &mut self.scratch_l[..samples];
-             let scratch_slice_r = &mut self.scratch_r[..samples];
-             
-             // Process track with current time and asset cache
-             track.process(&mut track_io, scratch_slice_l, scratch_slice_r, self.current_time, &self.samples);
-             
-             // Sum into master with Crossfader Gain
-             
-             // Calculate Crossfader Gain for this track
-             let xf_gain = match track.crossfader_group {
-                 CrossfaderGroup::Thru => 1.0,
-                 CrossfaderGroup::A => {
-                     // If pos > 0, fade out. If pos <= 0, full vol.
-                     if self.crossfader_position > 0.0 {
-                         // Constant power or linear? Linear is simpler for now.
-                         // 0.0 -> 1.0, 0.5 -> 0.5, 1.0 -> 0.0
-                         (1.0 - self.crossfader_position).max(0.0)
-                     } else {
-                         1.0
+        if self.is_playing {
+            for track in &mut self.tracks {
+                 // Use pre-allocated buffers
+                 let track_slice_l = &mut self.track_buf_l[..samples];
+                 let track_slice_r = &mut self.track_buf_r[..samples];
+                 
+                 // Create slice vector for track output
+                 let mut track_io = vec![track_slice_l, track_slice_r];
+                 
+                 // Scratch slices
+                 let scratch_slice_l = &mut self.scratch_l[..samples];
+                 let scratch_slice_r = &mut self.scratch_r[..samples];
+                 
+                 // Process track
+                 track.process(&mut track_io, scratch_slice_l, scratch_slice_r, self.current_time, &self.samples);
+                 
+                 // Sum into master with Crossfader Gain
+                 let xf_gain = match track.crossfader_group {
+                     CrossfaderGroup::Thru => 1.0,
+                     CrossfaderGroup::A => {
+                         if self.crossfader_position > 0.0 {
+                             (1.0 - self.crossfader_position).max(0.0)
+                         } else {
+                             1.0
+                         }
+                     },
+                     CrossfaderGroup::B => {
+                         if self.crossfader_position < 0.0 {
+                             (1.0 + self.crossfader_position).max(0.0)
+                         } else {
+                             1.0
+                         }
                      }
-                 },
-                 CrossfaderGroup::B => {
-                     // If pos < 0, fade out. If pos >= 0, full vol.
-                     if self.crossfader_position < 0.0 {
-                         (1.0 + self.crossfader_position).max(0.0)
-                     } else {
-                         1.0
-                     }
+                 };
+                 
+                 for i in 0..samples {
+                     output[0][i] += track_io[0][i] * xf_gain;
+                     output[1][i] += track_io[1][i] * xf_gain;
                  }
-             };
-             
-             for i in 0..samples {
-                 output[0][i] += track_io[0][i] * xf_gain;
-                 output[1][i] += track_io[1][i] * xf_gain;
-             }
+            }
+            
+            // Update Time
+            self.current_time += samples as u64;
         }
         
-        // Update Time
-        self.current_time += samples as u64;
+        // MIX One-Shot Samples
+        // Iterate backwards to allow removal
+        for i in (0..self.active_samples.len()).rev() {
+            let mut finished = false;
+            {
+                let event = &mut self.active_samples[i];
+                // Diag log once per event per block? Too spammy.
+                // Just log when starting? we can't easily.
+                
+                if let Some((l_src, r_src)) = self.samples.get(&event.asset_id) {
+                    for s in 0..samples {
+                        if event.cursor < l_src.len() {
+                            output[0][s] += l_src[event.cursor];
+                            output[1][s] += r_src[event.cursor]; // Assuming stereo or mono dup
+                            event.cursor += 1;
+                        } else {
+                            finished = true;
+                            break;
+                        }
+                    }
+                } else {
+                    finished = true;
+                }
+            }
+            if finished {
+                self.active_samples.remove(i);
+            }
+        }
         
         // Apply Master Gain
         self.master_gain.process(&[], output);
         
         // Master Soft Clipper (Limiter)
         // Prevents harsh digital clipping by rounding off peaks > 1.0
+        // Master Safety Limiter (Hard Clip)
+        // We use hard clipping for transparency below 0dB. 
+        // tanh adds "warmth" (distortion) which the user dislikes for clean import.
         for channel in output.iter_mut() {
             for sample in channel.iter_mut() {
-                *sample = sample.tanh(); 
+                *sample = sample.clamp(-1.0, 1.0); 
             }
         }
     }
@@ -698,6 +885,11 @@ impl Mixer {
                      },
                      Effect::Reverb { .. } => {
                           web_sys::console::log_1(&"Mixer: Reverb not implemented yet".into());
+                     },
+                     Effect::Bass { boost, cutoff, drive, width } => {
+                          let mut node = BassEnhancerNode::new(sample_rate);
+                          node.set_params(*boost, *cutoff, *drive, *width);
+                          track.effects.push(Box::new(node));
                      }
                  }
             }
