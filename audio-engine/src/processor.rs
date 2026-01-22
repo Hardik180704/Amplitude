@@ -152,9 +152,12 @@ impl WasmAudioProcessor {
         self.mixer.start_loop_seconds(track_id, length_seconds);
     }
 
-    pub fn trigger_sample(&mut self, asset_id: String) {
-        web_sys::console::log_1(&format!("WASM: trigger_sample called for {}", asset_id).into());
-        self.mixer.trigger_sample(asset_id);
+    pub fn trigger_synth_attack(&mut self, track_id: u32, note: u8, velocity: f32) {
+        self.mixer.trigger_synth_attack(track_id, note, velocity);
+    }
+
+    pub fn trigger_synth_release(&mut self, track_id: u32, note: u8) {
+        self.mixer.trigger_synth_release(track_id, note);
     }
 
     /// Fills the output array with peak values for each track.

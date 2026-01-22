@@ -1,4 +1,6 @@
 // Basic trait for any audio processing node
+use crate::midi::MidiEvent;
+
 pub trait AudioNode {
     /// Process a block of audio.
     /// inputs: Slice of input buffers (if any)
@@ -7,8 +9,8 @@ pub trait AudioNode {
     /// returns: false if the node is finished/silent and can be removed
     fn process(&mut self, inputs: &[&[f32]], outputs: &mut [&mut [f32]]) -> bool;
     
-    // For now simple stereo
-    // In future: channel counts, sample rate info
+    // Optional event handling
+    fn handle_event(&mut self, _event: MidiEvent) {}
 }
 
 // A simple sine wave source
