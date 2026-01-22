@@ -48,6 +48,44 @@ export interface TrackData {
     eq?: { low: number; mid: number; high: number };
     crossfaderGroup?: 'A' | 'B' | 'Thru';
     playbackRate?: number;
+    automation?: AutomationLane[];
+    synthConfig?: SynthConfig;
+}
+
+export type AutomationCurve = 'Linear' | 'Step' | { Bezier: number };
+
+export interface AutomationPoint {
+    time: number;
+    value: number; // 0-1
+    curve: AutomationCurve;
+}
+
+export interface AutomationLane {
+    target: string; // "gain", "pan", "filter"
+    points: AutomationPoint[];
+}
+
+// Modulation Types
+export type ModSource = 
+    | { Lfo: number } 
+    | { Envelope: number } 
+    | 'Velocity' 
+    | 'KeyTrack';
+
+export type ModTarget = 
+    | 'FilterCutoff' 
+    | 'FilterResonance' 
+    | { OscPitch: number } 
+    | 'Gain';
+
+export interface ModConnection {
+    source: ModSource;
+    target: ModTarget;
+    amount: number; // -1 to 1
+}
+
+export interface SynthConfig {
+    modMatrix: ModConnection[];
 }
 
 export interface Project {
