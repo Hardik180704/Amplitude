@@ -5,6 +5,8 @@
 @layer base {
   body {
     @apply bg-bg-main text-text-primary font-sans antialiased overflow-hidden;
+    background-image: radial-gradient(#222 1px, transparent 1px);
+    background-size: 20px 20px;
   }
 }
 
