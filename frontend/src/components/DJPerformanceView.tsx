@@ -59,120 +59,180 @@ const BackgroundVisualizer = () => {
     );
 };
 
-// Wrapper for Large Deck
 const LargeDeck = ({ trackId, label, color }: { trackId: number, label: string, color: string }) => {
     return (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 border border-white/5 rounded-3xl bg-[#0d121f] relative overflow-hidden shadow-2xl">
-            {/* Glow */}
-            <div className="absolute inset-0 bg-gradient-to-br opacity-5 pointer-events-none" style={{ backgroundImage: `linear-gradient(to bottom right, ${color}, transparent)` }}></div>
+        <div className="flex-1 flex flex-col items-center justify-between p-6 border border-white/5 rounded-3xl bg-[#080808] relative overflow-hidden shadow-2xl group">
+            {/* Ambient Background Glow */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80 z-0"></div>
+            <div className="absolute top-0 left-0 right-0 h-[300px] bg-gradient-to-b opacity-5 z-0" style={{ backgroundImage: `linear-gradient(to bottom, ${color}, transparent)` }}></div>
             
-            {/* Top Label */}
-            <div className="absolute top-6 left-6 text-4xl font-black text-white/10 tracking-tighter select-none pointer-events-none">
-                {label}
+            {/* Header Info */}
+            <div className="w-full flex justify-between items-start z-10 mb-8">
+                <div className="flex flex-col">
+                    <span className="text-[10px] font-black tracking-[0.2em] text-white/30 uppercase">{label}</span>
+                    <span className="text-xl font-bold text-white tracking-tight">Track {trackId}</span>
+                    <span className="text-xs text-white/40 font-mono">124.00 BPM</span>
+                </div>
+                <div className="px-2 py-1 rounded bg-white/5 border border-white/5 text-[10px] font-mono text-white/50">
+                    KEY: Am
+                </div>
             </div>
 
             {/* Deck */}
-            <div className="relative z-10 scale-125">
-                 <Deck trackId={trackId} size={300} />
+            <div className="relative z-10 scale-100 hover:scale-[1.02] transition-transform duration-500">
+                 <Deck trackId={trackId} size={280} />
             </div>
 
-            {/* Waveform Placeholder (Canvas later) */}
-            <div className="w-full h-32 mt-12 bg-black/40 rounded-lg border border-white/5 relative overflow-hidden">
-                <div className="absolute inset-0 flex items-center justify-center text-xs text-white/20 font-mono">
-                    SCROLLING WAVEFORM
+            {/* Scrolling Waveform (Simulated) */}
+            <div className="w-full h-24 mt-8 bg-[#111] rounded-lg border border-white/5 relative overflow-hidden group-hover:border-white/10 transition-colors">
+                {/* Grid */}
+                <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(90deg, transparent 98%, rgba(255,255,255,0.03) 98%)', backgroundSize: '20px 100%' }}></div>
+                <div className="absolute inset-0 flex items-center justify-center opacity-30">
+                     {/* Dynamic Wave Shape using multiple gradients */}
+                     <div className="w-full h-full flex items-center justify-center gap-[1px]">
+                         {Array.from({ length: 60 }).map((_, i) => (
+                             <div 
+                                key={i} 
+                                className="w-1 bg-current rounded-full" 
+                                style={{ 
+                                    height: `${20 + Math.random() * 60}%`, 
+                                    color: color, 
+                                    opacity: Math.random() * 0.5 + 0.5 
+                                }}
+                            ></div>
+                         ))}
+                     </div>
                 </div>
-                {/* Simulated Wave */}
-                <div className="absolute top-1/2 left-0 right-0 h-[10px] bg-current opacity-30 w-full" style={{ color }}></div>
+                <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-white/10"></div>
+                <div className="absolute top-0 bottom-0 left-1/2 w-[1px] bg-white/50 shadow-[0_0_10px_white]"></div>
             </div>
         </div>
     );
 };
 
 export const DJPerformanceView = () => {
-    const { project } = useProjectStore();
+    const { project, setTrackFxStutter, setTrackFxTapeStop, setTrackLoop } = useProjectStore();
     
     // Auto-assign first two tracks to A and B
-    // In real app, user maps them.
     const trackA = project.tracks.find(t => t.crossfaderGroup === 'A') || project.tracks[0];
     const trackB = project.tracks.find(t => t.crossfaderGroup === 'B') || project.tracks[1];
 
-    const { setTrackFxStutter, setTrackFxTapeStop, setTrackLoop } = useProjectStore();
-
     return (
-        <div className="w-full h-full bg-[#05070a] flex flex-col p-4 gap-4 relative overflow-hidden">
+        <div className="w-full h-full bg-[#030304] flex flex-col p-6 gap-6 relative overflow-hidden font-sans">
             
             <BackgroundVisualizer />
 
             {/* Main Console Area */}
-            <div className="flex-1 flex gap-4 min-h-0 z-10">
+            <div className="flex-1 flex gap-6 min-h-0 z-10 items-stretch">
                 {/* Left Deck (A) */}
                 {trackA ? (
-                    <LargeDeck trackId={trackA.id} label="DECK A" color="#0ea5e9" /> // Sky Blue
+                    <LargeDeck trackId={trackA.id} label="DECK A" color="#3b82f6" /> 
                 ) : (
-                    <div className="flex-1 flex items-center justify-center border border-white/5 rounded-3xl text-white/20 bg-black/40 backdrop-blur-sm">Empty Deck A</div>
+                    <div className="flex-1 border border-dashed border-white/10 rounded-3xl flex items-center justify-center text-white/20">Empty Deck A</div>
                 )}
 
-                {/* Central Mixer */}
-                <div className="w-[400px] shrink-0 flex flex-col border border-white/5 rounded-2xl bg-[#0a0e17]/90 backdrop-blur-md shadow-2xl overflow-hidden">
-                    {/* Header */}
-                    <div className="h-12 border-b border-white/5 flex items-center justify-center bg-[#111625]">
-                        <span className="text-xs font-black tracking-[0.3em] text-accent-primary">MIXER</span>
+                {/* Central Mixer (Hardware Look) */}
+                <div className="w-[380px] shrink-0 flex flex-col rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] relative">
+                    {/* Metal Texture */}
+                    <div className="absolute inset-0 bg-[#151515] z-0">
+                         {/* Brushed Vertical Lines */}
+                         <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent 0, transparent 2px, #fff 3px, transparent 4px)' }}></div>
+                         {/* Vignette */}
+                         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/50"></div>
                     </div>
                     
-                    <div className="flex-1 relative">
-                        <div className="absolute inset-0 overflow-hidden">
-                            <MixerPanel />
+                    {/* Header */}
+                    <div className="h-14 border-b border-black/50 flex items-center justify-center relative z-10 bg-gradient-to-b from-[#222] to-[#111]">
+                        <div className="flex flex-col items-center">
+                            <span className="text-[10px] font-black tracking-[0.3em] text-white/60">AMPLITUDE</span>
+                            <span className="text-[8px] text-blue-500 tracking-wider">PRO MIXER</span>
                         </div>
+                        {/* Screws */}
+                        <div className="absolute left-3 top-3 w-1.5 h-1.5 rounded-full bg-[#333] shadow-inner border border-[#111]"></div>
+                        <div className="absolute right-3 top-3 w-1.5 h-1.5 rounded-full bg-[#333] shadow-inner border border-[#111]"></div>
+                    </div>
+                    
+                    <div className="flex-1 relative z-10 px-1 py-4">
+                         <div className="h-full border-x border-white/5 bg-[#0a0a0a]/50 backdrop-blur-sm mx-2 rounded-lg overflow-hidden">
+                             <MixerPanel />
+                         </div>
                     </div>
                 </div>
 
                 {/* Right Deck (B) */}
                 {trackB ? (
-                     <LargeDeck trackId={trackB.id} label="DECK B" color="#f43f5e" /> // Rose Red
+                     <LargeDeck trackId={trackB.id} label="DECK B" color="#ec4899" />
                 ) : (
-                    <div className="flex-1 flex items-center justify-center border border-white/5 rounded-3xl text-white/20 bg-black/40 backdrop-blur-sm">Empty Deck B</div>
+                    <div className="flex-1 border border-dashed border-white/10 rounded-3xl flex items-center justify-center text-white/20">Empty Deck B</div>
                 )}
             </div>
             
             {/* Performance Pads / Footer */}
-            <div className="h-40 border border-white/5 rounded-2xl bg-[#0a0e17]/80 backdrop-blur-md flex items-center justify-center gap-8 shadow-lg z-10 px-8">
+            <div className="h-[140px] rounded-2xl bg-[#080808] border-t border-white/5 flex items-center justify-between gap-12 shadow-2xl z-10 px-12 relative overflow-hidden">
+                {/* Mesh Texture */}
+                <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, #333 1px, transparent 1px)', backgroundSize: '4px 4px' }}></div>
+                
                 {/* Left FX Grid */}
-                <div className="flex-1 flex gap-2 justify-center">
-                    <FXPad label="STUTTER" color="cyan" disabled={!trackA} onDown={() => trackA && setTrackFxStutter(trackA.id, true)} onUp={() => trackA && setTrackFxStutter(trackA.id, false)} />
-                    <FXPad label="BRAKE" color="red" disabled={!trackA} onDown={() => trackA && setTrackFxTapeStop(trackA.id, true)} onUp={() => trackA && setTrackFxTapeStop(trackA.id, false)} />
-                    <FXPad label="LOOP 4" color="yellow" disabled={!trackA} onDown={() => trackA && setTrackLoop(trackA.id, true, 4)} onUp={() => trackA && setTrackLoop(trackA.id, false)} />
-                    <FXPad label="HORN" color="white" disabled={false} onDown={() => { /* Sampler not impl */ }} onUp={() => {}} />
+                <div className="flex gap-3 justify-center relative z-10">
+                    <FXPad label="STUTTER" color="cyan" active={trackA?.fx_stutter} disabled={!trackA} onDown={() => trackA && setTrackFxStutter(trackA.id, true)} onUp={() => trackA && setTrackFxStutter(trackA.id, false)} />
+                    <FXPad label="BRAKE" color="red" active={trackA?.fx_tape_stop} disabled={!trackA} onDown={() => trackA && setTrackFxTapeStop(trackA.id, true)} onUp={() => trackA && setTrackFxTapeStop(trackA.id, false)} />
+                    <FXPad label="LOOP 4" color="yellow" active={trackA?.loop_enabled} disabled={!trackA} onDown={() => trackA && setTrackLoop(trackA.id, true, 4)} onUp={() => trackA && setTrackLoop(trackA.id, false)} />
+                    <FXPad label="HORN" color="white" isTrigger disabled={false} onDown={() => audioEngine.triggerSample('horn')} onUp={() => {}} />
                 </div>
                 
-                <div className="text-white/10 font-black text-2xl tracking-[0.2em] -rotate-90 origin-center text-[10px] w-4 whitespace-nowrap">
-                   PERFORMANCE
+                {/* Center Strip branding */}
+                <div className="flex flex-col items-center justify-center gap-1 opacity-20">
+                    <div className="w-32 h-[1px] bg-white"></div>
+                    <span className="text-[10px] tracking-[0.5em] font-black uppercase">Performance</span>
+                    <div className="w-32 h-[1px] bg-white"></div>
                 </div>
 
                 {/* Right FX Grid */}
-                <div className="flex-1 flex gap-2 justify-center">
-                    <FXPad label="STUTTER" color="pink" disabled={!trackB} onDown={() => trackB && setTrackFxStutter(trackB.id, true)} onUp={() => trackB && setTrackFxStutter(trackB.id, false)} />
-                    <FXPad label="BRAKE" color="red" disabled={!trackB} onDown={() => trackB && setTrackFxTapeStop(trackB.id, true)} onUp={() => trackB && setTrackFxTapeStop(trackB.id, false)} />
-                    <FXPad label="LOOP 4" color="orange" disabled={!trackB} onDown={() => trackB && setTrackLoop(trackB.id, true, 4)} onUp={() => trackB && setTrackLoop(trackB.id, false)} />
-                    <FXPad label="SIREN" color="white" disabled={false} onDown={() => { /* Sampler not impl */ }} onUp={() => {}} />
+                <div className="flex gap-3 justify-center relative z-10">
+                    <FXPad label="STUTTER" color="pink" active={trackB?.fx_stutter} disabled={!trackB} onDown={() => trackB && setTrackFxStutter(trackB.id, true)} onUp={() => trackB && setTrackFxStutter(trackB.id, false)} />
+                    <FXPad label="BRAKE" color="red" active={trackB?.fx_tape_stop} disabled={!trackB} onDown={() => trackB && setTrackFxTapeStop(trackB.id, true)} onUp={() => trackB && setTrackFxTapeStop(trackB.id, false)} />
+                    <FXPad label="LOOP 4" color="orange" active={trackB?.loop_enabled} disabled={!trackB} onDown={() => trackB && setTrackLoop(trackB.id, true, 4)} onUp={() => trackB && setTrackLoop(trackB.id, false)} />
+                    <FXPad label="SIREN" color="white" isTrigger disabled={false} onDown={() => audioEngine.triggerSample('siren')} onUp={() => {}} />
                 </div>
             </div>
         </div>
     );
 };
 
-const FXPad = ({ label, color, onDown, onUp, disabled }: any) => {
+const FXPad = ({ label, color, onDown, onUp, disabled, active, isTrigger }: any) => {
+    // Colors mapping
+    const colorMap: any = {
+        cyan: 'bg-cyan-500 shadow-cyan-500/50',
+        red: 'bg-red-500 shadow-red-500/50',
+        yellow: 'bg-yellow-500 shadow-yellow-500/50',
+        pink: 'bg-pink-500 shadow-pink-500/50',
+        orange: 'bg-orange-500 shadow-orange-500/50',
+        white: 'bg-white shadow-white/50'
+    };
+    
+    const glowClass = (active || isTrigger) ? colorMap[color] : 'bg-[#151515] border border-[#333]';
+    const textClass = (active || isTrigger) ? 'text-black' : 'text-white/40';
+
     return (
         <button 
             disabled={disabled}
-            className={`w-24 h-24 rounded-xl border border-white/10 flex flex-col items-center justify-center gap-1 transition-all shadow-lg active:shadow-inner active:brightness-110 ${disabled ? 'opacity-20 cursor-not-allowed grayscale' : 'active:scale-95'}`}
-            style={{ backgroundColor: disabled ? 'transparent' : `rgba(255,255,255,0.05)`, borderColor: disabled ? '#333' : color }}
+            className={`
+                w-20 h-20 rounded-lg flex flex-col items-center justify-center gap-1 transition-all duration-100 ease-out
+                ${disabled ? 'opacity-20 cursor-not-allowed grayscale' : 'active:scale-95 active:brightness-110 cursor-pointer'}
+                ${active ? `${glowClass} shadow-[0_0_20px_rgba(0,0,0,0.5)] border-transparent scale-[0.98]` : 'hover:border-white/20 bg-[#1a1a1a] shadow-lg border-white/5'}
+            `}
+            style={(active || isTrigger) ? {} : { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 0 rgba(0,0,0,0.5)' }} // 3D button look
             onMouseDown={disabled ? undefined : onDown}
             onMouseUp={disabled ? undefined : onUp}
-            onMouseLeave={disabled ? undefined : onUp} // Safety release
+            onMouseLeave={disabled ? undefined : onUp}
         >
-            <div className={`w-full h-1 bg-${color}-500 blur-md opacity-20`}></div>
-            <span className="font-black tracking-widest text-[10px] text-white/50">{label}</span>
-            <div className={`w-full h-1 bg-${color}-500 blur-md opacity-20`}></div>
+            {/* Inner Light */}
+            {(active || isTrigger) && <div className="absolute inset-0 bg-white/20 animate-pulse rounded-lg"></div>}
+            
+            <span className={`font-black tracking-wider text-[9px] relative z-10 ${textClass}`}>{label}</span>
+            
+            {/* Status light strip */}
+            <div className={`w-8 h-1 rounded-full ${active ? 'bg-black/50' : `bg-${color}-500/20`}`}></div>
         </button>
     )
 }

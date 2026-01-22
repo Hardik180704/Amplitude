@@ -97,31 +97,36 @@ const Meter = ({ trackId }: { trackId: number }) => {
 
 const Crossfader = ({ value, onChange }: { value: number, onChange: (v: number) => void }) => {
     return (
-        <div className="w-full h-16 bg-[#111] border-t border-[#333] flex items-center justify-center px-8 relative">
-            <div className="absolute left-4 text-xs font-bold text-gray-500">A</div>
-            <div className="absolute right-4 text-xs font-bold text-gray-500">B</div>
+        <div className="h-20 border-t border-black flex items-center justify-center px-8 relative bg-[#0a0a0a]">
+             {/* Labels (Engraved Look) */}
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/10 select-none">A</div>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/10 select-none">B</div>
             
-            <input 
-                type="range"
-                min="-1"
-                max="1"
-                step="0.01"
-                value={value}
-                onChange={(e) => onChange(parseFloat(e.target.value))}
-                className="w-full max-w-[400px] h-8 appearance-none bg-transparent cursor-pointer z-10"
-                style={{
-                    // Custom styles for crossfader feel
-                }}
-            />
-            {/* Visual Track */}
-            <div className="absolute w-full max-w-[400px] h-2 bg-[#222] rounded-full pointer-events-none">
-                 <div className="absolute top-0 bottom-0 bg-[#444] rounded-full" 
-                      style={{ 
-                          left: '50%', 
-                          width: '2px',
-                          transform: 'translateX(-50%)'
-                      }} 
-                 />
+            <div className="relative w-full max-w-[320px] h-10 flex items-center justify-center">
+                 {/* Track Background */}
+                 <div className="absolute inset-x-0 h-2 bg-black rounded-full shadow-[inset_0_1px_3px_rgba(0,0,0,1)] border-b border-white/5"></div>
+                 {/* Center Marker */}
+                 <div className="absolute left-1/2 top-1/2 -translate-y-1/2 w-[2px] h-4 bg-white/20 rounded-full z-0"></div>
+
+                 {/* Input (Invisible interactions) */}
+                 <input 
+                    type="range"
+                    min="-1"
+                    max="1"
+                    step="0.01"
+                    value={value}
+                    onChange={(e) => onChange(parseFloat(e.target.value))}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-20"
+                />
+
+                {/* Visual Fader Cap */}
+                <div 
+                    className="absolute h-8 w-5 bg-gradient-to-b from-[#444] to-[#111] border border-black rounded shadow-[0_4px_10px_rgba(0,0,0,0.8)] z-10 pointer-events-none flex items-center justify-center after:content-[''] after:w-[2px] after:h-[60%] after:bg-white after:shadow-[0_0_5px_white]"
+                    style={{ 
+                        left: `${((value + 1) / 2) * 100}%`,
+                        transform: 'translateX(-50%)'
+                    }}
+                ></div>
             </div>
         </div>
     );
@@ -134,164 +139,125 @@ const ChannelStrip = ({ track, selected, onSelect, updateTrack, setGroup }: any)
 
     return (
         <div 
-            className={`flex flex-col items-center h-full w-[140px] shrink-0 border-r border-white/5 py-4 gap-2 transition-all duration-200 ${selected ? 'bg-[#131b2c] shadow-[inset_0_0_20px_rgba(59,130,246,0.1)]' : 'bg-transparent'}`}
+            className={`flex-1 min-w-[120px] flex flex-col items-center h-full py-4 gap-2 transition-all duration-200 group/strip relative ${selected ? 'bg-white/5' : 'bg-transparent hover:bg-white/[0.02]'}`}
             onClick={() => onSelect(track.id)}
         >
             {/* Header / Deck Toggle */}
-            <div className="w-full text-center px-1 flex flex-col gap-1">
-                <div className={`text-[10px] font-bold uppercase truncate ${selected ? 'text-blue-400' : 'text-gray-400'}`}>
+            <div className="w-full text-center px-2 flex flex-col gap-1 mb-2">
+                <div className={`text-[9px] font-black uppercase truncate tracking-wider ${selected ? 'text-blue-400' : 'text-gray-500'}`}>
                     {track.name}
                 </div>
-                <button 
-                    onClick={(e) => { e.stopPropagation(); setShowDeck(!showDeck); }}
-                    className={`text-[8px] px-2 py-0.5 rounded border ${showDeck ? 'bg-blue-500 text-white border-blue-400' : 'bg-transparent text-gray-500 border-gray-600'}`}
-                >
-                    {showDeck ? 'MIX' : 'DECK'}
-                </button>
+                {/* Tiny Toggle */}
+                <div className="flex gap-1 justify-center opacity-0 group-hover/strip:opacity-100 transition-opacity">
+                     <button 
+                        onClick={(e) => { e.stopPropagation(); setShowDeck(!showDeck); }}
+                        className="text-[8px] bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-white/50"
+                    >
+                        {showDeck ? 'MIX' : 'DECK'}
+                    </button>
+                </div>
             </div>
 
             {showDeck ? (
                 <div className="flex-1 w-full px-2 flex flex-col items-center justify-center">
-                    <Deck trackId={track.id} size={100} />
+                    <Deck trackId={track.id} size={90} />
                 </div>
             ) : (
-                <>
-                {/* EQ Section */}
-                <div className="flex flex-col gap-2 p-2 bg-[#0e121b] rounded-lg border border-white/5 shadow-inner w-full items-center">
-                    <span className="text-[9px] text-gray-500 font-bold mb-1 w-full text-center border-b border-white/5 pb-1">EQ</span>
-                <Knob 
-                    label="HIGH" 
-                    value={track.eq?.high || 1.0} 
-                    min={0} max={2.0} 
-                    onChange={(v) => updateTrack(track.id, { eq: { ...track.eq, high: v } })}
-                    size={40}
-                />
-                <Knob 
-                    label="MID" 
-                    value={track.eq?.mid || 1.0} 
-                    min={0} max={2.0} 
-                    onChange={(v) => updateTrack(track.id, { eq: { ...track.eq, mid: v } })}
-                    size={40}
-                />
-                <Knob 
-                    label="LOW" 
-                    value={track.eq?.low || 1.0} 
-                    min={0} max={2.0} 
-                    onChange={(v) => updateTrack(track.id, { eq: { ...track.eq, low: v } })}
-                    size={40}
-                />
-            </div>
-
-            {/* Filter Section */}
-            <div className="flex flex-col gap-1 items-center pb-2 w-full pt-2">
-                 <Knob 
-                    label="FILTER" 
-                    value={track.filter || 0} 
-                    min={-1} max={1} 
-                    onChange={(v) => updateTrack(track.id, { filter: v })}
-                    size={48}
-                    color="#f43f5e" // Rose color for filter
-                />
-            </div>
-            </>
-            )}
-
-            {/* Fader Area */}
-            <div className={`flex-1 flex flex-row items-center justify-center gap-2 w-full px-2 relative ${showDeck ? 'h-32 grow-0' : 'min-h-[200px]'}`}>
-                {/* Meter */}
-                <Meter trackId={track.id} />
+                <div className="flex flex-col w-full h-full items-center gap-1">
                 
-                {/* Fader */}
-                <div className="h-full flex items-center justify-center py-2 group relative w-10">
-                    {/* Track Slot */}
-                    <div className="absolute top-2 bottom-2 left-1/2 -ml-[1px] w-[2px] bg-[#000] rounded-full shadow-[inset_0_0_2px_rgba(0,0,0,1)]"></div>
-                    
-                    {/* Tick Marks (Canvas or simple divs) */}
-                    <div className="absolute top-2 bottom-2 left-1.5 w-[1px] flex flex-col justify-between opacity-30">
-                        {[...Array(11)].map((_, i) => <div key={i} className="w-1 h-[1px] bg-white"></div>)}
-                    </div>
-
-                    <input 
-                        type="range" 
-                        min={-60} 
-                        max={6} 
-                        step={0.1}
-                        value={track.gain_db}
-                        onChange={(e) => updateTrack(track.id, { gain_db: parseFloat(e.target.value) })}
-                        className="appearance-none h-full w-full bg-transparent z-10 cursor-pointer opacity-0"
-                        style={{ WebkitAppearance: 'slider-vertical' } as any}
+                {/* EQ Stack */}
+                <div className="flex flex-col gap-3 p-2 rounded w-full items-center">
+                    <Knob 
+                        label="HIGH" 
+                        value={track.eq?.high || 1.0} 
+                        min={0} max={2.0} 
+                        onChange={(v) => updateTrack(track.id, { eq: { ...track.eq, high: v } })}
+                        size={32}
+                        color="#64748b"
                     />
+                    <Knob 
+                        label="MID" 
+                        value={track.eq?.mid || 1.0} 
+                        min={0} max={2.0} 
+                        onChange={(v) => updateTrack(track.id, { eq: { ...track.eq, mid: v } })}
+                        size={32}
+                        color="#64748b"
+                    />
+                    <Knob 
+                        label="LOW" 
+                        value={track.eq?.low || 1.0} 
+                        min={0} max={2.0} 
+                        onChange={(v) => updateTrack(track.id, { eq: { ...track.eq, low: v } })}
+                        size={32}
+                        color="#64748b"
+                    />
+                </div>
+
+                {/* Filter Knob (Big) */}
+                <div className="py-2">
+                     <Knob 
+                        label="FILT" 
+                        value={track.filter || 0} 
+                        min={-1} max={1} 
+                        onChange={(v) => updateTrack(track.id, { filter: v })}
+                        size={40}
+                        color={track.filter < 0 ? '#3b82f6' : (track.filter > 0 ? '#ef4444' : '#64748b')} 
+                    />
+                </div>
+                
+                {/* Fader Area */}
+                <div className="flex-1 flex flex-row items-center justify-center gap-3 w-full px-2 relative min-h-[160px]">
+                    {/* Meter (Slim) */}
+                    <div className="h-full py-2">
+                        <Meter trackId={track.id} />
+                    </div>
                     
-                    {/* Custom Fader Cap (Visual Only, follows inputs via calculation if needed, but for now we rely on input's thumb or basic styling) */}
-                    {/* Actually, native vertical range input is hard to style perfectly across browsers. 
-                        Let's implement a custom drag logic like Knob if we want perfection.
-                        For speed/reliability now: Styled Range Input + Visual Track. 
-                    */}
-                    <div 
-                        className="absolute left-1/2 -ml-3 w-6 h-10 bg-gradient-to-b from-[#333] to-[#111] border border-black rounded shadow-xl pointer-events-none flex items-center justify-center after:content-[''] after:w-full after:h-[1px] after:bg-white/50"
-                        style={{ 
-                            bottom: `${Math.min(100, Math.max(0, ((track.gain_db - (-60)) / (6 - (-60))) * 100))}%`,
-                            transform: 'translateY(50%)', // Center on point
-                            boxShadow: '0 4px 6px rgba(0,0,0,0.5)'
-                        }}
-                    >
+                    {/* Fader Track */}
+                    <div className="h-full flex items-center justify-center py-2 relative w-8 group/fader">
+                        {/* Slot */}
+                        <div className="absolute top-2 bottom-2 left-1/2 -ml-[2px] w-[4px] bg-[#050505] rounded-full shadow-[inset_0_1px_2px_rgba(0,0,0,1)] border border-white/5"></div>
+                        
+                        {/* Tick Marks */}
+                        <div className="absolute top-2 bottom-2 right-full mr-1 w-2 flex flex-col justify-between opacity-20">
+                             {[...Array(6)].map((_, i) => <div key={i} className="w-1.5 h-[1px] bg-white ml-auto"></div>)}
+                        </div>
+
+                        <input 
+                            type="range" 
+                            min={-60} 
+                            max={6} 
+                            step={0.1}
+                            value={track.gain_db}
+                            onChange={(e) => updateTrack(track.id, { gain_db: parseFloat(e.target.value) })}
+                            className="appearance-none h-full w-full bg-transparent z-10 cursor-ns-resize opacity-0 absolute inset-0"
+                            style={{ WebkitAppearance: 'slider-vertical' } as any}
+                        />
+                        
+                        {/* Fader Cap */}
+                        <div 
+                            className="absolute left-1/2 -ml-3 w-6 h-10 bg-gradient-to-b from-[#333] to-[#111] border border-black rounded-[2px] shadow-[0_4px_8px_rgba(0,0,0,0.6)] pointer-events-none flex items-center justify-center after:content-[''] after:w-full after:h-[1px] after:bg-white/80 group-active/fader:bg-[#444] transition-colors"
+                            style={{ 
+                                bottom: `${Math.min(100, Math.max(0, ((track.gain_db - (-60)) / (6 - (-60))) * 100))}%`,
+                                transform: 'translateY(50%)', 
+                            }}
+                        >
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Pan & Mute/Solo/Cue */}
-            <div className="flex flex-col gap-2 w-full px-2 items-center">
-                 <Knob 
-                    label="PAN" 
-                    value={track.pan} 
-                    min={-1} max={1} 
-                    onChange={(v) => updateTrack(track.id, { pan: v })}
-                    size={24}
-                />
-                
-                <div className="flex gap-1 w-full justify-center">
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); updateTrack(track.id, { muted: !track.muted }); }}
-                        className={`text-[9px] w-6 h-6 rounded flex items-center justify-center font-bold transition-all border ${track.muted ? 'bg-yellow-500 text-black border-yellow-400' : 'bg-[#222] text-gray-500 border-gray-700 hover:border-gray-500'}`}
-                    >
-                        M
-                    </button>
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); updateTrack(track.id, { soloed: !track.soloed }); }}
-                        className={`text-[9px] w-6 h-6 rounded flex items-center justify-center font-bold transition-all border ${track.soloed ? 'bg-blue-500 text-white border-blue-400' : 'bg-[#222] text-gray-500 border-gray-700 hover:border-gray-500'}`}
-                    >
-                        S
-                    </button>
-                    {/* CUE Button (Placeholder for now acting as visual) */}
+                {/* Pan & buttons */}
+                <div className="w-full flex justify-between px-2 pt-2 border-t border-white/5 mt-1">
                      <button 
-                        className={`text-[9px] w-6 h-6 rounded flex items-center justify-center font-bold transition-all border bg-[#222] text-gray-500 border-gray-700 hover:border-gray-500 opacity-50 cursor-not-allowed`}
-                        title="Cue (Coming Soon)"
-                    >
-                        P
-                    </button>
-                </div>
-                
-                {/* Crossfader Assignment */}
-                <div className="flex w-full bg-[#111] rounded border border-[#333] overflow-hidden">
-                    <button 
                         onClick={(e) => { e.stopPropagation(); setGroup(track.id, 'A'); }}
-                        className={`flex-1 text-[8px] py-1 font-bold ${track.crossfaderGroup === 'A' ? 'bg-gray-200 text-black' : 'text-gray-500 hover:bg-[#222]'}`}
+                        className={`text-[8px] font-black w-5 h-5 rounded flex items-center justify-center ${track.crossfaderGroup === 'A' ? 'bg-blue-500 text-white' : 'bg-[#111] text-gray-600 border border-white/5'}`}
                     >A</button>
                     <button 
-                        onClick={(e) => { e.stopPropagation(); setGroup(track.id, 'Thru'); }}
-                        className={`flex-1 text-[8px] py-1 font-bold border-x border-[#333] ${!track.crossfaderGroup || track.crossfaderGroup === 'Thru' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-[#222]'}`}
-                    >THRU</button>
-                    <button 
                         onClick={(e) => { e.stopPropagation(); setGroup(track.id, 'B'); }}
-                        className={`flex-1 text-[8px] py-1 font-bold ${track.crossfaderGroup === 'B' ? 'bg-gray-200 text-black' : 'text-gray-500 hover:bg-[#222]'}`}
+                        className={`text-[8px] font-black w-5 h-5 rounded flex items-center justify-center ${track.crossfaderGroup === 'B' ? 'bg-pink-500 text-white' : 'bg-[#111] text-gray-600 border border-white/5'}`}
                     >B</button>
                 </div>
             </div>
-            
-            {/* DB Value logic */}
-            <div className="mt-2 text-[9px] font-mono text-blue-400 bg-black/40 px-2 py-0.5 rounded border border-blue-900/30">
-                {track.gain_db.toFixed(1)} dB
-            </div>
+            )}
         </div>
     );
 }
@@ -300,15 +266,9 @@ export const MixerPanel = () => {
     const { project, updateTrack, selectedTrackId, setSelectedTrack, crossfaderPosition, setCrossfaderPosition, setTrackCrossfaderGroup } = useProjectStore();
 
     return (
-        <div className="h-full min-h-[500px] flex flex-col bg-[#111] border-l border-[#333]">
-            <div className="h-8 shrink-0 px-4 border-b border-[#333] flex items-center justify-between bg-[#18181b]">
-                <span className="text-[10px] font-black text-gray-500 tracking-[0.2em]">MIXER</span>
-            </div>
-            
-            <div className="flex-1 overflow-x-auto flex flex-row">
-                 {/* Master Strip Placeholder */}
-                 
-                 {/* Track Strips */}
+        <div className="h-full min-h-[500px] flex flex-col bg-transparent">
+             {/* Tracks Container */}
+            <div className="flex-1 overflow-x-auto flex flex-row divide-x divide-white/5">
                 {project.tracks.map(track => (
                     <ChannelStrip 
                         key={track.id} 
@@ -321,8 +281,8 @@ export const MixerPanel = () => {
                 ))}
                 
                 {project.tracks.length === 0 && (
-                    <div className="w-full flex items-center justify-center text-gray-600 text-xs italic">
-                        No Tracks
+                    <div className="w-full flex items-center justify-center text-white/20 text-xs italic tracking-widest">
+                        NO TRACKS ACTIVE
                     </div>
                 )}
             </div>
